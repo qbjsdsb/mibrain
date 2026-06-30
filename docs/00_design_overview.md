@@ -476,6 +476,9 @@ mibrain/                                    # 仓库根
 - ⏳ 等待用户最终审阅
 
 ### Phase 1：MVP 单链路打通（最小可用）
+
+> **技术细节直接依据**：本 Phase 涉及的全部技术规范（llama.cpp b9830 CMake 编译 + .so 输出路径 + jniLibs 结构 / JNI 跨线程 callback / b9830 C API 清单 / KSU 模块脚本完整草案）详见 [15_technical_specs.md](./15_technical_specs.md) §1-§4，Phase 1 编码前必读。
+
 - [ ] Kotlin APK 骨架 + Compose UI（参考 [ToolNeuron](https://github.com/Siddhesh2377/ToolNeuron)）
 - [ ] **JNI 集成**：编译 llama.cpp b9830 → libllama.so + libggml.so（参考 [llama.android 官方模块](https://github.com/ggml-org/llama.cpp/tree/master/examples/llama.android)）
 - [ ] **LlamaEngine.kt**：JNI wrapper（项目自命名，参考 ToolNeuron `InferenceService.kt` + `InferenceClient.kt`，~1500 行 Kotlin + C）

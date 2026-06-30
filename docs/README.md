@@ -18,6 +18,8 @@
 | [11_phase8_platform_design.md](./11_phase8_platform_design.md) | Phase 8 平台化能力设计（API/Widget/MCP） | ✅ 草案 |
 | [12_phase9_multimodal_design.md](./12_phase9_multimodal_design.md) | Phase 9 多模态设计（OCR + 看图对话） | ✅ 草案 |
 | [13_phase10_ux_enhancements_design.md](./13_phase10_ux_enhancements_design.md) | Phase 10 用户体验增强（多用户/儿童/i18n/a11y/音频路由/全局暂停） | ✅ 草案 |
+| [14_feasibility_recheck_and_plan.md](./14_feasibility_recheck_and_plan.md) | 第四轮 web 核实订正（F3-F7 修订记录 + 修订计划） | ✅ |
+| [15_technical_specs.md](./15_technical_specs.md) | 技术规范补强（Phase 1 产出前必读：CMake/JNI/C API/KSU/sherpa-onnx/错误处理/状态机） | ✅ |
 
 ## 当前阶段
 

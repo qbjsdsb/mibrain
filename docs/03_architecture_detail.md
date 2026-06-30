@@ -78,9 +78,11 @@
 
 ### 2.2 启动顺序
 
+> **技术细节补强**：KSU 模块脚本完整草案（module.prop + post-fs-data.sh + sepolicy.rule + sysconfig XML）详见 [15_technical_specs.md](./15_technical_specs.md) §4。T=10s 执行 post-fs-data.sh 时 APK 可能未安装，脚本需 graceful skip 模式（详见 15 §4.2）。
+
 ```
 T=0     开机
-T=10s   KSU post-fs-data.sh 配置 appops（RECORD_AUDIO allow 等）
+T=10s   KSU post-fs-data.sh 配置 appops（RECORD_AUDIO allow 等；graceful skip 模式：APK 未装则跳过）
 T=12s   系统启动完成
 T=20s   LSPosed 注入 Phantom Mic hook
 T=30s   MiBrain ForegroundService 启动（Direct Boot 模式下，无需用户解锁）
@@ -127,6 +129,8 @@ SHA256 校验
 ## 3. JNI 推理接口（LlamaEngine.kt）
 
 > **命名说明**：本项目自命名 `LlamaEngine.kt`，与 ToolNeuron 实际文件名 `InferenceService.kt` 区分；实现思路参考 ToolNeuron 的 `InferenceService.kt`（位于 `service/inference/` 目录）与 llama.android 官方模块的 `InferenceEngine`，并非 fork ToolNeuron 的同名文件。
+>
+> **技术细节补强**：JNI 跨线程 callback 实现规范（JavaVM/AttachCurrentThread/NewGlobalRef）详见 [15_technical_specs.md](./15_technical_specs.md) §2；llama.cpp b9830 C API 清单（18 个 API + 推理循环伪代码）详见 [15_technical_specs.md](./15_technical_specs.md) §3；CMake 编译选项与 .so 输出路径详见 [15_technical_specs.md](./15_technical_specs.md) §1。
 
 ### 3.1 接口签名（草案）
 
@@ -178,6 +182,8 @@ APK 启动时调 `LlamaEngine.getVersion()`，校验：
 ---
 
 ## 4. 回环防护协议（Phase 2）
+
+> **技术细节补强**：状态机完整规范（9 状态枚举 + 超时统一表 + watchdog + 多轮接续路径）详见 [15_technical_specs.md](./15_technical_specs.md) §7；统一错误处理（MiBrainError sealed class + ErrorCode 枚举）详见 [15_technical_specs.md](./15_technical_specs.md) §6。本节为状态机的高层时序约束，状态机内部完整规范以 15 §7 为准。
 
 ### 问题
 TTS 播放声音 → 扬声器 → 麦克风拾起 → ASR 识别 → 当作新命令处理。
