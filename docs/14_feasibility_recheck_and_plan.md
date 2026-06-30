@@ -19,7 +19,7 @@
 
 | 项 | 验证结论 | 来源 |
 |---|---|---|
-| llama.cpp b9844 | 真实 release tag，MIT 许可 | [release b9844](https://github.com/ggml-org/llama.cpp/releases/tag/b9844) |
+| llama.cpp b9830 | 真实 release tag，MIT 许可 | [release b9830](https://github.com/ggml-org/llama.cpp/releases/tag/b9830) |
 | llama.android 官方 JNI 模块 | 真实存在，含完整 Gradle 工程 + Kotlin Flow 流式 token | [examples/llama.android](https://github.com/ggml-org/llama.cpp/tree/master/examples/llama.android) |
 | android-arm64 tarball | 真实存在，含 libllama.so + libggml.so + bin + include | release 直链 |
 | NDK 编译文档 | 齐全，含 CMake 完整参数 | docs/android.md |
@@ -62,7 +62,7 @@
 | R1 | **TTS 无 chunk 回调**：sherpa-onnx TTS 是 OfflineTts（一次性生成完整 PCM），无官方流式回调 | 中 | Phase 2 / Phase 9 G6 字幕同步需自切 PCM 数组成 chunk 喂 AudioTrack |
 | R2 | **Qwen2.5-1.5B function calling brittle**：BFCL v3 实测直答准确率 44%，需 32-token CoT 才到 64%，长 CoT 反崩到 25% | 高 | Phase 6 工具调用需 32-token CoT prompt 或换 3B；M1.5B 复杂工具调用不可靠 |
 | R3 | **Direct Boot + sherpa-onnx 组合未公开验证**：理论可行但无先例，4 个子项需 PoC | 高 | Phase 1 启动前必做 PoC |
-| R4 | **Phantom Mic 高风险评级准确甚至偏保守**：最后 release 2024-07-24，近 2 年未更新，无 HyperOS 2 / Android 15 兼容性反馈，**无对等替代品** | 高 | D14 已准确，无新缓解方案；Phase 4 真机验证为硬关卡 |
+| R4 | **Phantom Mic 高风险评级准确甚至偏保守**：最后 release 2024-07-24，近 2 年未更新，无 HyperOS 3 / Android 15 兼容性反馈，**无对等替代品**；**第四轮 web 核实确认上游已停滞 23 个月**（自 2024-07-24 后零更新） | 高 | D14 已准确，无新缓解方案；Phase 4 真机验证为硬关卡；**第四轮补降级方案**（appops + 双触发兜底 / WhatsMicFix 改造 / 放弃锁屏唤醒） |
 | R5 | **Qwen 商标限制**：Apache 2.0 允许商用但 "Qwen" 商标不可用于衍生品市场宣传 | 低 | README / UI 不写 "Powered by Qwen"，改写 "使用 Qwen2.5 模型" |
 | R6 | **sherpa-onnx v1.13.3 PyPI wheel 未上传**：仅 GitHub 源码 + 二进制资产，PyPI 仍是 1.13.2 | 低 | Android APK 直接用 AAR，不依赖 PyPI |
 
@@ -92,6 +92,23 @@
 | R11 | **银行/支付通知被朗读**：余额变动、转账短信、信用卡账单 | 中 | 默认对"银行/转账/余额"等关键词做敏感过滤；默认仅朗读 appName，不朗读 text |
 | R12 | **GLM-4V API 需实名认证**：智谱开放平台强制手机号 + 中国大陆身份证实名，境外用户无法直接实名 | 中 | UI 首次启用必须弹出实名认证说明；备选 GPT-4V / Claude 3.5（境外可付费但需代理） |
 | R13 | **base64 流量未量化**：原图 + 多轮对话累计可达数十 MB，4G 网络延迟可能 5-15s，触发 HTTP 30s 超时 | 中 | MVP 默认"高压缩"档位（720p JPEG q70，单张 ~270-540KB）；移动数据自动降级到"中压缩"（可选开关） |
+
+### 1.5.3 第四轮 web 核实补正（2026-06-30，本轮新增）
+
+> 第四轮通过 WebSearch / WebFetch 独立核实 8 项关键依赖最新状态，发现 4 项需修订（F3-F7）。
+
+| # | 错误 / 风险 | 真实情况 | 修订决策 |
+|---|---|---|---|
+| F3 | **llama.cpp 锁定版本 b9844 不存在** | 2026-06-30 时点 GitHub 最新 release 实为 **b9830**（2026-06-28 发布），b9844 尚未发布。若 CI 拉 `releases/tag/b9844` 会 404 失败 | [D7](../DECISIONS.md)：版本号 b9844 → b9830；全项目 replace_all |
+| F4 | **LSPosed Vector 来源归属未明确** | 当前活跃维护的 fork 位于 **`JingMatrix/Vector`** 仓库（非原 `LSPosed/LSPosed`） | [D9](../DECISIONS.md)：补来源归属，Phase 1 下载以此仓库为准 |
+| F5 | **Phantom Mic 上游已确认停滞** | 自 2024-07-24 v2.0 后**再无任何新版本发布**，至 2026-06-30 已停滞 **23 个月**，上游确认无后续维护 | [D14](../DECISIONS.md)：补降级方案（appops + 双触发兜底 / WhatsMicFix 改造 / 放弃锁屏唤醒） |
+| F6 | **WenetSpeech 许可表述自相矛盾**（修正原 E12 表述） | OpenSLR 官方数据集页标注 "License: CC BY 4.0"（允许商用），但论文写 "non-commercial usage under CC-BY 4.0"（自相矛盾）。原表述"CC-BY 4.0 non-commercial"不准确 | [D23](../DECISIONS.md)：修正表述为"许可表述自相矛盾致商用存疑"，风险等级保持高 |
+| F7 | **matcha-icefall-zh-baker 不是合规替代**（确认 E11 判断） | matcha-icefall-zh-baker 基于 Data-Baker 语料训练，Data-Baker 明确 NON-COMMERCIAL，**不是 vits-zh-ll 的合规替代方案**。需另寻基于 LibriTTS / Common Voice（CC0 / CC BY 4.0）的中文模型 | [D22](../DECISIONS.md)：补"matcha 不是合规替代"明确结论 |
+
+**第四轮无修订项**（核实通过）：
+- sherpa-onnx v1.13.3：git tag 2026-06-15 存在（仅有 git tag 无正式 Release notes，不影响 AAR 下载）
+- HyperOS 3 K50U 推送：OS3.0.1.0.VLFCNXM 2026-01-20 OTA / OS3.0.2.0.VLFCNXM 2026-04-13 Fastboot，与假设完全一致
+- Qwen2.5-1.5B function calling：44%/64% 数值无法从公开来源直接核实，但与"小模型低于 50%"行业认知一致，建议 Phase 1 自测验证
 
 ---
 
@@ -124,7 +141,7 @@
 - [ ] 新增风险表条目：TTS chunk / Qwen 1.5B function calling / Direct Boot 未验证
 - [ ] 在 README.md 加 "Qwen 商标不可用于衍生品宣传" 提示
 
-#### 第二轮 + 第三轮修复（本轮已完成）
+#### 第二轮 + 第三轮修复（前轮已完成）
 - [x] **[E10]** 修订 [03_architecture_detail.md §6](./03_architecture_detail.md) 内存算法：1.5B 串行峰值 ~7.5GB / 3B 峰值 8.59GB（必 OOM）
 - [x] **[E7]** 修订 [11_phase8_platform_design.md §1.2/§1.3/§1.5](./11_phase8_platform_design.md) HTTP server：NanoHTTPD → Ktor
 - [x] **[E9]** 修订 [10_phase7_phone_control_design.md §2.3.2](./10_phase7_phone_control_design.md) 微信 A2A 移除
@@ -139,6 +156,24 @@
 - [x] **[R13]** 修订 [12_phase9_multimodal_design.md §3.3.1](./12_phase9_multimodal_design.md) base64 流量量化
 - [x] **[D28-D31]** 新增决策到 [DECISIONS.md](../DECISIONS.md)
 - [x] **[06_lspoded_setup.md]** §1 + §6.1 更新 LSPosed Vector + HyperOS 3
+
+#### 第四轮修复（本轮新增，2026-06-30）
+- [x] **[F3]** 修订 [DECISIONS.md D7](../DECISIONS.md) llama.cpp 版本号 b9844 → b9830（b9844 未发布）；全项目 7 个文件 replace_all
+- [x] **[F4]** 修订 [DECISIONS.md D9](../DECISIONS.md) LSPosed Vector 补来源归属（`JingMatrix/Vector` fork）
+- [x] **[F5]** 修订 [DECISIONS.md D14](../DECISIONS.md) Phantom Mic 确认停滞 23 个月 + 补降级方案（4 条路径）
+- [x] **[F6]** 修订 [DECISIONS.md D23](../DECISIONS.md) WenetSpeech 许可表述修正为"自相矛盾致商用存疑"
+- [x] **[F7]** 修订 [DECISIONS.md D22](../DECISIONS.md) 明确 matcha-icefall-zh-baker 不是合规替代
+- [x] 全项目 HyperOS 2 → HyperOS 3（13 个文件）
+- [x] 全项目旧内存数字（6.77GB/1.23GB/7.67GB/330MB）→ 第三轮重算后数字（7.5GB/0.5GB/7.89GB/0.11GB）
+- [x] 全项目 8 步 → 9 步白名单（6 个文件）
+- [x] 全项目旧决策计数（23 项/17 条）→ 31 项
+- [x] [README.md](../README.md) 修订说明 blockquote 补第四轮 F3-F7
+- [x] [00_design_overview.md](./00_design_overview.md) §6/§10 修订 b9830 + HyperOS 3 + 内存数字
+- [x] [01_feasibility_verification.md](./01_feasibility_verification.md) §三风险 1/2 + §七结论修订
+- [x] [03_architecture_detail.md](./03_architecture_detail.md) b9830 replace_all
+- [x] [app/README.md](../app/README.md) / [ksu_module/README.md](../ksu_module/README.md) / [scripts/README.md](../scripts/README.md) 旧 HTTP/llama-server/3B 路径修订（详见下文 §三 CI 方案）
+- [x] [.github/ISSUE_TEMPLATE/bug_report.md](../.github/ISSUE_TEMPLATE/bug_report.md) / [CONTRIBUTING.md](../CONTRIBUTING.md) / [docs/README.md](./README.md) / [02_second_review.md](./02_second_review.md) / [07_troubleshooting.md](./07_troubleshooting.md) / [13_phase10_ux_enhancements_design.md](./13_phase10_ux_enhancements_design.md) HyperOS 2 → 3 + 其他旧引用
+- [x] [third_party/NOTICES.md](../third_party/NOTICES.md) b9844 → b9830
 
 **准出条件**：所有文档无幻觉引用，所有依赖链接可达，所有许可声明准确（含训练数据 NON-COMMERCIAL 标注）。
 
@@ -172,7 +207,7 @@
   3. 最坏情况：放弃锁屏唤醒，仅亮屏可用
 
 #### PoC-C：JNI wrapper 编译可行性
-- 拉 llama.cpp b9844 源码
+- 拉 llama.cpp b9830 源码
 - 按 docs/android.md 的 NDK CMake 参数编译 libllama.so + libggml.so
 - 集成到最小 Android Studio 工程
 - 调 llama.android examples 里的 InferenceEngine 加载 1.5B Q4_K_M
@@ -387,7 +422,7 @@
 ## 六、关键来源（三轮累计）
 
 ### 第一轮来源
-- [llama.cpp b9844 release](https://github.com/ggml-org/llama.cpp/releases/tag/b9844)
+- [llama.cpp b9830 release](https://github.com/ggml-org/llama.cpp/releases/tag/b9830)
 - [llama.android 官方模块](https://github.com/ggml-org/llama.cpp/tree/master/examples/llama.android)（**注意路径**）
 - [llama.cpp docs/android.md](https://github.com/ggml-org/llama.cpp/blob/master/docs/android.md)
 - [sherpa-onnx v1.13.3 release](https://github.com/k2-fsa/sherpa-onnx/releases/tag/v1.13.3)

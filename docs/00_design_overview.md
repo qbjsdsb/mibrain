@@ -17,13 +17,13 @@
 | 项 | 值 |
 |---|---|
 | 项目名 | MiBrain（已确认，见 [D4](../DECISIONS.md)） |
-| 目标设备 | 红米 K50 Ultra（骁龙 8+ Gen 1，8GB RAM，Adreno 730，HyperOS 2） |
+| 目标设备 | 红米 K50 Ultra（骁龙 8+ Gen 1，8GB RAM，Adreno 730，HyperOS 3） |
 | Root 方案 | KernelSU + ZygiskNext + LSPosed |
 | 用户硬约束 | 只能保证 KSU + ZygiskNext + LSP，其他能力不保证（不自编译内核、不改 ROM、不长期维护复杂 hook） |
 | 核心目标 | 离线、本地、隐私不出手机的语音助手 |
 | 开发语言 | Kotlin（APK + JNI wrapper）+ Shell（KSU 脚本） |
 | 当前阶段 | Phase 0：设计冻结（不交付代码，见 [README.md](../README.md)） |
-| 推理后端 | llama.cpp b9844 + 官方 [llama.android](https://github.com/ggml-org/llama.cpp/tree/master/examples/llama.android) JNI 模块（[D7](../DECISIONS.md)） |
+| 推理后端 | llama.cpp b9830 + 官方 [llama.android](https://github.com/ggml-org/llama.cpp/tree/master/examples/llama.android) JNI 模块（[D7](../DECISIONS.md)） |
 | 模型存储 | `/data/user_de/0/com.mibrain/files/models/`（DE 加密区 + Direct Boot，[D21](../DECISIONS.md)） |
 
 ---
@@ -50,7 +50,7 @@
 | 模型首 token | < 2s | 模型已 keep-alive 状态 |
 | 首句语音回应 | < 5s | 含 TTS 合成 |
 | 锁屏后可用率 | > 90% | 24 小时内随机测试 |
-| 内存峰值 | < 7GB | 默认 1.5B 模型实测约 6.77GB（[03 §6](./03_architecture_detail.md)），留 1.23GB headroom |
+| 内存峰值 | < 7.6GB | 默认 1.5B 模型串行峰值约 7.5GB（[03 §6](./03_architecture_detail.md) 第三轮重算），留 0.5GB headroom（紧张，Stage 5 真机硬关卡） |
 | 隐私 | 100% 离线 | 任何数据不上云 |
 
 ---
@@ -124,7 +124,7 @@
 - LiteRT-LM（HostAI 用的）只支持 .litertlm 格式，模型选择面窄
 - llama.cpp 支持 GGUF，社区模型海量（Qwen、Phi、Gemma 全有）
 - llama.cpp 官方提供 [llama.android](https://github.com/ggml-org/llama.cpp/tree/master/examples/llama.android) JNI 模块，已在 PocketPal/ToolNeuron 等多个 Android LLM 项目中验证可用
-- GPU 加速：Adreno 730 支持 Vulkan，未来可启用 `-DLLAMA_VULKAN=ON`；OpenCL + Adreno 后端**无 Android 预编译包**（仅 Windows arm64 版 `llama-b9844-bin-win-opencl-adreno-arm64.zip`），Android 需用 Snapdragon 工具链 Docker 镜像自编译（`GGML_OPENCL=ON` + `GGML_HEXAGON=ON`），Phase 0-5 不做 GPU 加速
+- GPU 加速：Adreno 730 支持 Vulkan，未来可启用 `-DLLAMA_VULKAN=ON`；OpenCL + Adreno 后端**无 Android 预编译包**（仅 Windows arm64 版 `llama-b9830-bin-win-opencl-adreno-arm64.zip`），Android 需用 Snapdragon 工具链 Docker 镜像自编译（`GGML_OPENCL=ON` + `GGML_HEXAGON=ON`），Phase 0-5 不做 GPU 加速
 
 **结果**：APK 内通过 JNI 调用 libllama.so，参考 [llama.android 官方模块](https://github.com/ggml-org/llama.cpp/tree/master/examples/llama.android) + ToolNeuron `InferenceService.kt` + `InferenceClient.kt`（位于 `service/inference/` 目录）（[D7](../DECISIONS.md)、[X2](../DECISIONS.md)）。**不再走 llama-server HTTP 路径**（[X7 废弃](../DECISIONS.md)）
 
@@ -148,7 +148,7 @@
 
 **结果**：不自己写 LSPosed 模块，**装现成的 Phantom Mic**，只在文档里给配置指引
 
-> ⚠️ **风险升级（见 [D14](../DECISIONS.md)）**：Phantom Mic v2.0 发布于 2024-07，至本次设计冻结（2026-06-30）**已近 2 年未更新**，上游可能停滞，HyperOS 2（Android 15）兼容性未验证。原稿"活跃维护"判断已修正为误判。进入 Phase 1 前先去 [上游仓库](https://github.com/Xposed-Modules-Repo/tn.amin.phantom_mic/releases) 复查活跃度，看 Issues 区是否有 HyperOS 2 / Android 15 反馈；Phase 4 真机验证后准备 fallback（`appops set <uid> RECORD_AUDIO allow` + 双触发兜底）
+> ⚠️ **风险升级（见 [D14](../DECISIONS.md)）**：Phantom Mic v2.0 发布于 2024-07，至本次设计冻结（2026-06-30）**已近 2 年未更新**，**第四轮 web 核实确认上游已停滞 23 个月**（自 2024-07-24 v2.0 后零更新），HyperOS 3（Android 15）兼容性未验证且无官方更新。原稿"活跃维护"判断已修正为误判。Phase 1 已确认无新版本；降级方案见 D14（appops + 双触发兜底 / WhatsMicFix 改造 / 放弃锁屏唤醒）
 
 ### 4.5 决策：不依赖 Tasker，APK 自带语音对话
 
@@ -165,7 +165,7 @@
 
 ```
 ┌────────────────────────────────────────────────────────────────────┐
-│  Android 系统层（HyperOS 2）                                        │
+│  Android 系统层（HyperOS 3）                                        │
 │                                                                     │
 │  ┌─────────────────────────────────────────────────────────────┐   │
 │  │ LSPosed 注入（root 后启动）                                   │   │
@@ -198,7 +198,7 @@
 │  │  └────────────────────────────────────────────────────────┘  │   │
 │  │                                                              │   │
 │  │  JNI 库 (jniLibs/arm64-v8a/)：                              │   │
-│  │   ├─ libllama.so + libggml.so   ← llama.cpp b9844 编译产出   │   │
+│  │   ├─ libllama.so + libggml.so   ← llama.cpp b9830 编译产出   │   │
 │  │   ├─ libsherpa-onnx-jni.so      ← sherpa-onnx v1.13.3 AAR    │   │
 │  │   └─ libonnxruntime.so          ← sherpa-onnx AAR 自带        │   │
 │  └─────────────────────────────────────────────────────────────┘   │
@@ -242,7 +242,7 @@
 
 | 组件 | 选型 | 版本 | 来源 |
 |---|---|---|---|
-| LLM 推理 | llama.cpp + 官方 [llama.android](https://github.com/ggml-org/llama.cpp/tree/master/examples/llama.android) JNI 模块 | b9844 | github.com/ggml-org/llama.cpp |
+| LLM 推理 | llama.cpp + 官方 [llama.android](https://github.com/ggml-org/llama.cpp/tree/master/examples/llama.android) JNI 模块 | b9830 | github.com/ggml-org/llama.cpp |
 | LLM JNI wrapper | LlamaEngine.kt（项目自命名；实现参考 ToolNeuron `InferenceService.kt` + `InferenceClient.kt`，[X2](../DECISIONS.md)） | - | 自写 ~1500 行 Kotlin + C，参考样板 |
 | 流式 ASR | sherpa-onnx (官方 Kotlin API) | v1.13.3 | github.com/k2-fsa/sherpa-onnx |
 | 流式 TTS | sherpa-onnx VITS | v1.13.3 | 同上 |
@@ -256,7 +256,7 @@
 | Gradle | Kotlin DSL | 8.5+ | - |
 
 > **2026-06-30 修订说明**：
-> - 删除原"Android arm64 二进制 | llama-b9844-bin-android-arm64"条目（不再走 HTTP 路径，KSU 模块不再放 llama-server 二进制）
+> - 删除原"Android arm64 二进制 | llama-b9830-bin-android-arm64"条目（不再走 HTTP 路径，KSU 模块不再放 llama-server 二进制）
 > - LLM 推理改为 JNI 调用 libllama.so + libggml.so（APK 内嵌 jniLibs/arm64-v8a/）
 > - 唤醒词从 openWakeWord 改为 sherpa-onnx KWS（统一技术栈，[D23](../DECISIONS.md)）
 > - VAD 单列条目（原隐含在 ASR 里），明确为 sherpa-onnx 自带 silero_vad
@@ -377,8 +377,8 @@ mibrain/                                    # 仓库根
 │   │   │   ├── assets/
 │   │   │   │   └── default_prompts.json           # 默认 system prompt
 │   │   │   └── jniLibs/arm64-v8a/                  # 预编译 .so
-│   │   │       ├── libllama.so                     # llama.cpp b9844 编译产出
-│   │   │       ├── libggml.so                      # llama.cpp b9844 编译产出
+│   │   │       ├── libllama.so                     # llama.cpp b9830 编译产出
+│   │   │       ├── libggml.so                      # llama.cpp b9830 编译产出
 │   │   │       ├── libsherpa-onnx-jni.so           # sherpa-onnx v1.13.3 AAR
 │   │   │       └── libonnxruntime.so               # sherpa-onnx AAR 自带
 │   │   └── proguard-rules.pro
@@ -398,7 +398,7 @@ mibrain/                                    # 仓库根
 │
 ├── scripts/                               # 辅助脚本
 │   ├── download_models.sh                 # 一键下载模型到 DE 区（HF + 阿里 OSS 镜像）
-│   ├── build_llama_jni.sh                 # 编译 llama.cpp b9844 → libllama.so + libggml.so
+│   ├── build_llama_jni.sh                 # 编译 llama.cpp b9830 → libllama.so + libggml.so
 │   ├── verify_assets.sh                   # 校验所有下载文件的 SHA256
 │   ├── build_ksu_zip.sh                   # 打包 KSU 模块 zip
 │   └── ci/                                # CI 脚本 ⏳ Phase 5
@@ -451,18 +451,18 @@ mibrain/                                    # 仓库根
 
 | 风险 | 概率 | 影响 | 缓解策略 |
 |---|---|---|---|
-| 8GB 内存峰值触发 lmkd | 高 | 高 | 默认 1.5B 模型（[D1](../DECISIONS.md)），峰值 6.77GB（[03 §6](./03_architecture_detail.md)）；模型 keep-alive 5min 自动卸载；监听 `onTrimMemory(TRIM_MEMORY_RUNNING_CRITICAL)` 主动调 `unloadModel()`（VAD+KWS 不卸载） |
+| 8GB 内存峰值触发 lmkd | 高 | 高 | 默认 1.5B 模型（[D1](../DECISIONS.md)），串行峰值约 7.5GB / 最坏叠加 7.89GB（[03 §6](./03_architecture_detail.md) 第三轮重算）；模型 keep-alive 5min 自动卸载；监听 `onTrimMemory(TRIM_MEMORY_RUNNING_CRITICAL)` 主动调 `unloadModel()`（VAD+KWS 不卸载）；Stage 5 真机 24h 硬关卡 |
 | MIUI 锁屏杀后台 | 高 | 高 | Phantom Mic hook + sysconfig 白名单 + 前台服务通知 + Direct Boot（[D21](../DECISIONS.md)） |
 | sherpa-onnx native 库体积大 | 中 | 中 | 用 proguard 移除未用 ABI；只打包 arm64-v8a |
 | 唤醒词误触发 | 中 | 低 | 双段确认（唤醒后说"嗯？"再听命令）；KWS cooldown 5s（[03 §8 config.json](./03_architecture_detail.md)） |
-| **Phantom Mic 上游停滞 / HyperOS 2 不兼容** | **高** | **高** | 见 [DECISIONS.md D14](../DECISIONS.md)；v2.0 至 2026-06-30 已近 2 年未更新；Phase 1 前先复查 [上游活跃度](https://github.com/Xposed-Modules-Repo/tn.amin.phantom_mic/releases)；备选 appops + 双触发兜底 |
-| llama.cpp 升级破坏 JNI ABI | 中 | 中 | 锁版本到 b9844（[D7](../DECISIONS.md)）；CI 自动验证 JNI 接口签名；`LlamaEngine.getVersion()` 启动时校验（[03 §3.3](./03_architecture_detail.md)） |
+| **Phantom Mic 上游停滞 / HyperOS 3 不兼容** | **高** | **高** | 见 [DECISIONS.md D14](../DECISIONS.md)；**第四轮 web 核实确认上游已停滞 23 个月**（自 2024-07-24 v2.0 后零更新）；Phase 1 前已确认无新版本；降级方案：appops + 双触发兜底 / WhatsMicFix 改造 / 放弃锁屏唤醒（详见 D14） |
+| llama.cpp 升级破坏 JNI ABI | 中 | 中 | 锁版本到 b9830（[D7](../DECISIONS.md)，第四轮 [F3](./14_feasibility_recheck_and_plan.md) 订正：原 b9844 未发布）；CI 自动验证 JNI 接口签名；`LlamaEngine.getVersion()` 启动时校验（[03 §3.3](./03_architecture_detail.md)） |
 | 麦克风被其他 App 占用 | 低 | 中 | 监听 AudioFocus 变化；占用时静默等待 |
 | JNI wrapper 工程量 ~1500 行被低估 | 中 | 中 | 参考 [ToolNeuron `InferenceService.kt` + `InferenceClient.kt`](https://github.com/Siddhesh2377/ToolNeuron)（位于 `service/inference/` 目录）（[X2](../DECISIONS.md)）；Phase 1 优先打通最小路径，复杂特性（function calling）后置 |
 | 模型下载到 DE 区失败 / SHA256 不匹配 | 低 | 中 | APK 内置下载器带断点续传 + SHA256 校验 + 多源切换（HF 主 → 阿里 OSS 镜像兜底）；失败删除重试 |
 | **TTS 无流式 chunk 回调** | **中** | **中** | sherpa-onnx TTS 是 OfflineTts（一次性生成完整 PCM 数组），无官方流式回调；MVP 用 "先合成完整 PCM 再播" 模式（[D26](../DECISIONS.md)）；Phase 2 / Phase 9 G6 字幕同步需在 Kotlin 端按 200ms 切 PCM 数组成 chunk 喂 AudioTrack 对齐播放进度 |
 | **Qwen2.5-1.5B function calling 不稳** | **高** | **中** | BFCL v3 实测直答准确率仅 44%，32-token CoT 提升到 64%，长 CoT 反崩到 25%；Phase 6 工具调用必须用 32-token CoT prompt 或换 3B 模型（[D25](../DECISIONS.md)）；[D17](../DECISIONS.md) 混合方案关键词正则优先兜底 |
-| **Direct Boot + sherpa-onnx 加载未公开验证** | **中** | **高** | sherpa-onnx 能否在 Direct Boot 下加载 .so + ONNX 模型无先例（BCR 仅验证 Direct Boot + AudioRecord）；Stage 1 PoC-A 设为硬关卡，4 子项（.so 加载 / ONNX 模型加载 / ORT 无 SharedPreferences 副作用 / HyperOS 2 不杀 FGS）任一失败则放弃 Direct Boot 退到"用户首次解锁后才启动"（[D27](../DECISIONS.md)） |
+| **Direct Boot + sherpa-onnx 加载未公开验证** | **中** | **高** | sherpa-onnx 能否在 Direct Boot 下加载 .so + ONNX 模型无先例（BCR 仅验证 Direct Boot + AudioRecord）；Stage 1 PoC-A 设为硬关卡，4 子项（.so 加载 / ONNX 模型加载 / ORT 无 SharedPreferences 副作用 / HyperOS 3 不杀 FGS）任一失败则放弃 Direct Boot 退到"用户首次解锁后才启动"（[D27](../DECISIONS.md)） |
 
 ---
 
@@ -470,14 +470,14 @@ mibrain/                                    # 仓库根
 
 ### Phase 0：设计冻结（当前）
 - ✅ 本文档完成（第二轮深度检查后修订完成）
-- ✅ [DECISIONS.md](../DECISIONS.md) 决策清单（17 已确认 + 3 待讨论 + 7 已废弃）
+- ✅ [DECISIONS.md](../DECISIONS.md) 决策清单（31 已确认 + 7 已废弃，第四轮 web 核实后修订）
 - ✅ [03_architecture_detail.md](./03_architecture_detail.md) 详细架构（JNI 接口、状态机 CAS、内存预算、Direct Boot 流程）
 - ✅ Phase 6-9 四份扩展设计稿 + Phase 10 一份 UX 增强设计稿
 - ⏳ 等待用户最终审阅
 
 ### Phase 1：MVP 单链路打通（最小可用）
 - [ ] Kotlin APK 骨架 + Compose UI（参考 [ToolNeuron](https://github.com/Siddhesh2377/ToolNeuron)）
-- [ ] **JNI 集成**：编译 llama.cpp b9844 → libllama.so + libggml.so（参考 [llama.android 官方模块](https://github.com/ggml-org/llama.cpp/tree/master/examples/llama.android)）
+- [ ] **JNI 集成**：编译 llama.cpp b9830 → libllama.so + libggml.so（参考 [llama.android 官方模块](https://github.com/ggml-org/llama.cpp/tree/master/examples/llama.android)）
 - [ ] **LlamaEngine.kt**：JNI wrapper（项目自命名，参考 ToolNeuron `InferenceService.kt` + `InferenceClient.kt`，~1500 行 Kotlin + C）
 - [ ] AndroidManifest.xml：`directBootAware=true` + ForegroundService(microphone)
 - [ ] 一个静态对话界面（按按钮触发，非语音）
@@ -505,7 +505,7 @@ mibrain/                                    # 仓库根
 - [ ] KSU appops 自动配置
 - [ ] 内存监控 + 自动卸载（监听 onTrimMemory）
 - [ ] CI 自动构建
-- [ ] **D14 复查**：Phase 1 启动前去 [上游仓库](https://github.com/Xposed-Modules-Repo/tn.amin.phantom_mic/releases) 复查 Phantom Mic 活跃度 + HyperOS 2 兼容性
+- [ ] **D14 复查**：Phase 1 启动前去 [上游仓库](https://github.com/Xposed-Modules-Repo/tn.amin.phantom_mic/releases) 复查 Phantom Mic 活跃度 + HyperOS 3 兼容性（第四轮 web 核实已确认上游停滞 23 个月，此项转为"确认降级方案可用性"）
 - **验收**：锁屏 24h 后仍可唤醒；3B 模型 OOM 测试（[D1](../DECISIONS.md)）
 
 ### Phase 5：发布
@@ -597,7 +597,7 @@ mibrain/                                    # 仓库根
 - 完整设计文档 **14 份**（[docs/README.md](./README.md)）：含本文 + 02-13 共 14 份
   - 00-08 核心设计 9 份
   - 09-13 扩展设计稿 5 份（Phase 6-10）
-- 决策清单 [DECISIONS.md](../DECISIONS.md)（**17 条已确认 + 3 条待讨论 + 7 条已废弃**，共 27 条）
+- 决策清单 [DECISIONS.md](../DECISIONS.md)（**31 条已确认（D1-D31） + 7 条已废弃（X1-X7）**，共 38 条，第四轮 web 核实后修订）
 - 借鉴清单（本文 §3，含完整仓库链接）+ 风险评估（本文 §10）+ 路线图（本文 §11）
 - Issue 模板 3 份（bug / feature / test_report）
 - 第三方许可声明 [third_party/NOTICES.md](../third_party/NOTICES.md)

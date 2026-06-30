@@ -132,21 +132,21 @@ KSU 模块**也不打包模型**，只放二进制和脚本。
 
 ### 重新查证
 - 红米 K50U 原厂 HyperOS 1 基于 Android 12
-- 现役大概率已升级到 **HyperOS 2 基于 Android 15**
+- 现役已升级到 **HyperOS 3 基于 Android 15**（[F2](./14_feasibility_recheck_and_plan.md) web 核实确认：OS3.0.1.0.VLFCNXM 2026-01-20 OTA / OS3.0.2.0.VLFCNXM 2026-04-13 Fastboot）
 - Android 14+ 引入了 `foregroundServiceType="microphone"` 强制要求
 - Phantom Mic 项目 README 未明确声明 Android 14/15 兼容
 
 ### 风险等级
 🟡 中（可能能用，需要真机验证）
 
-> **2026-06-30 更新**：风险升级为 🔴 高。Phantom Mic v2.0 自 2024-07 发布至本次设计冻结已近 2 年未更新，上游活跃度存疑，HyperOS 2（Android 15）兼容性更不确定。详见 [DECISIONS.md D14](../DECISIONS.md) 与 [01_feasibility_verification.md §三 风险 1](./01_feasibility_verification.md)。
+> **2026-06-30 更新 + 第四轮 web 核实确认**：风险升级为 🔴 高。Phantom Mic v2.0 自 2024-07 发布至本次设计冻结已近 2 年未更新，**第四轮 web 核实确认上游已停滞 23 个月**（自 2024-07-24 v2.0 后零更新），上游活跃度存疑，HyperOS 3（Android 15）兼容性更不确定。详见 [DECISIONS.md D14](../DECISIONS.md) 与 [01_feasibility_verification.md §三 风险 1](./01_feasibility_verification.md)。
 
 ### 修订
 1. Phase 1-3 不依赖 Phantom Mic，先做"按按钮触发"的 APK
 2. Phase 4 真机验证 Phantom Mic 是否需要更新版本或备选模块
 3. 增加备选方案：`appops set <uid> RECORD_AUDIO allow`（root shell 命令）
 
-> **✅ 2026-06-30 二轮检查后确认有效**：此发现升级后并入 [D14](../DECISIONS.md)。Phase 1 启动前去 [上游仓库](https://github.com/Xposed-Modules-Repo/tn.amin.phantom_mic/releases) 复查活跃度 + Issues 区看 HyperOS 2 / Android 15 反馈；Phase 4 真机验证后准备 fallback。
+> **✅ 2026-06-30 二轮检查后确认有效 + 第四轮确认上游停滞**：此发现升级后并入 [D14](../DECISIONS.md)。Phase 1 启动前去 [上游仓库](https://github.com/Xposed-Modules-Repo/tn.amin.phantom_mic/releases) 复查活跃度（第四轮已确认无新版本）+ Issues 区看 HyperOS 3 / Android 15 反馈；Phase 4 真机验证后准备 fallback；**第四轮补降级方案**（WhatsMicFix 改造 / 放弃锁屏唤醒，详见 D14）。
 
 ---
 

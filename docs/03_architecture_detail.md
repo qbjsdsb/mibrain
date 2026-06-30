@@ -154,7 +154,7 @@ class LlamaEngine(private val modelPath: String, private val config: LlamaConfig
 }
 
 data class LlamaVersion(
-    val llamaCppBuild: String,    // "b9844"
+    val llamaCppBuild: String,    // "b9830"
     val capabilities: List<String>, // ["chat", "tools", "stream"]
     val modelLoaded: Boolean
 )

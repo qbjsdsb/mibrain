@@ -17,7 +17,7 @@
 
 ### llama.cpp
 - 仓库：https://github.com/ggml-org/llama.cpp
-- 版本：b9844
+- 版本：b9830（第四轮 [F3](../docs/14_feasibility_recheck_and_plan.md) 订正：原 b9844 在 2026-06-30 尚未发布，b9830 为 2026-06-28 最新 release）
 - 许可：MIT License
 - 用途：本地 LLM 推理（GGUF 格式）。通过自编译 `libllama.so` + `libggml.so` 打入 APK 的 `jniLibs/arm64-v8a/`，由 Kotlin 通过 JNI 调用（[D7](../DECISIONS.md)）
 - 许可文本：https://github.com/ggml-org/llama.cpp/raw/master/LICENSE
@@ -101,9 +101,9 @@
 ### Phantom Mic
 - 仓库：https://github.com/Xposed-Modules-Repo/tn.amin.phantom_mic
 - 许可：详见原仓库
-- 用途：hook AudioRecord.cpp 解决 MIUI/HyperOS 2 后台录音
+- 用途：hook AudioRecord.cpp 解决 MIUI/HyperOS 3 后台录音
 - 说明：用户自行安装，不打包进本项目
-- 风险：v2.0 自 2024-07 发布至本次设计冻结（2026-06-30）已近 2 年未更新，HyperOS 2（Android 15）兼容性未验证（[D14](../DECISIONS.md)）
+- 风险：v2.0 自 2024-07 发布至本次设计冻结（2026-06-30）已近 2 年未更新，**第四轮 web 核实确认上游已停滞 23 个月**（自 2024-07-24 v2.0 后零更新），HyperOS 3（Android 15）兼容性未验证且无官方更新（[D14](../DECISIONS.md)）
 
 ### KernelSU
 - 仓库：https://github.com/tiann/KernelSU

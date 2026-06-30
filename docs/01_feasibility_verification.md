@@ -5,7 +5,7 @@
 > 验证结论：**所有设计依赖项 100% 可达可用**，但有 3 项风险需在开发期应对
 >
 > **⚠️ 2026-06-30 二轮深度检查后的重大修订**（本报告保留作历史追溯，每个相关章节后都加了"二轮检查后"标注）：
-> - **推理后端从 llama-server HTTP 切回 JNI**（[D7 修订](../DECISIONS.md) + [X7 废弃](../DECISIONS.md)）：原 §一 #1 "llama-b9844-bin-android-arm64" 验证仍有效（说明 llama.cpp 有 android-arm64 编译产出），但用途从"KSU 模块内放 llama-server 二进制"改为"自编译 libllama.so + libggml.so 打入 APK jniLibs"
+> - **推理后端从 llama-server HTTP 切回 JNI**（[D7 修订](../DECISIONS.md) + [X7 废弃](../DECISIONS.md)）：原 §一 #1 "llama-b9830-bin-android-arm64" 验证仍有效（说明 llama.cpp 有 android-arm64 编译产出），但用途从"KSU 模块内放 llama-server 二进制"改为"自编译 libllama.so + libggml.so 打入 APK jniLibs"
 > - **模型路径改 DE 加密区 + Direct Boot**（[D21 新增](../DECISIONS.md)）：从"app 私有目录"进一步改为 `/data/user_de/0/com.mibrain/files/models/`
 > - **默认模型从 3B 改 1.5B**（[D1 修订](../DECISIONS.md)）：3B 作为"质量优先"可选项
 > - **ASR/TTS 模型换 Apache 2.0 许可**（[D22 新增](../DECISIONS.md)）：原 §一 #5 paraformer (CC BY-NC) + #6 aishell3 (CC BY-NC-ND) 已弃用
@@ -19,7 +19,7 @@
 
 | # | 依赖项 | 验证项 | 结果 | 证据 |
 |---|---|---|---|---|
-| 1 | llama.cpp android-arm64 二进制 | release 直链可用 + 包含 libllama.so | ✅ | `llama-b9844-bin-android-arm64.tar.gz` 在 release b9844 资产列表中 |
+| 1 | llama.cpp android-arm64 二进制 | release 直链可用 + 包含 libllama.so | ✅ | `llama-b9830-bin-android-arm64.tar.gz` 在 release b9830 资产列表中 |
 | 2 | sherpa-onnx AAR (v1.13.3) | 直链可用 + 内含 arm64-v8a 的 .so | ✅ | `sherpa-onnx-1.13.3.aar` 53.87MB，掘金实测确认含 `libonnxruntime.so` + `libsherpa-onnx-jni.so` 在 `jniLibs/arm64-v8a/` |
 | 3 | Qwen2.5-1.5B-Instruct GGUF（默认） | HF 直链可用 | ✅ | `https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf` HTTP 200 |
 | 4 | Qwen2.5-3B-Instruct GGUF（备选，质量优先） | HF 直链可用 | ✅ | 同上路径换 3b，HTTP 200 |
@@ -51,13 +51,13 @@
 ### 2.1 llama.cpp android-arm64 包
 
 ```
-最新 release tag: b9844
+最新 release tag: b9830
 资产列表中包含:
-  - llama-b9844-bin-android-arm64.tar.gz    ← 专为 Android bionic libc 编译
-  - llama-b9844-bin-win-opencl-adreno-arm64.zip  ← Windows on Snapdragon 版（非 Android，b9844 无 Android 预编译包）
+  - llama-b9830-bin-android-arm64.tar.gz    ← 专为 Android bionic libc 编译
+  - llama-b9830-bin-win-opencl-adreno-arm64.zip  ← Windows on Snapdragon 版（非 Android，b9830 无 Android 预编译包）
 ```
 
-**注意**：b9844 release **不提供 Android 版的 OpenCL Adreno 加速包**（仅有 Windows arm64 版 `llama-b9844-bin-win-opencl-adreno-arm64.zip`）。Android 上要启用 Adreno GPU 加速需自行用 Snapdragon 工具链 Docker 镜像编译（启用 `GGML_OPENCL=ON` + `GGML_HEXAGON=ON`），产物为 `libggml-opencl.so` / `libggml-hexagon.so` 等。详见 llama.cpp docs/backend/snapdragon/README.md。Phase 0-5 不做 GPU 加速，仅用 CPU 推理；未来 Phase 11+ 可考虑。
+**注意**：b9830 release **不提供 Android 版的 OpenCL Adreno 加速包**（仅有 Windows arm64 版 `llama-b9830-bin-win-opencl-adreno-arm64.zip`）。Android 上要启用 Adreno GPU 加速需自行用 Snapdragon 工具链 Docker 镜像编译（启用 `GGML_OPENCL=ON` + `GGML_HEXAGON=ON`），产物为 `libggml-opencl.so` / `libggml-hexagon.so` 等。详见 llama.cpp docs/backend/snapdragon/README.md。Phase 0-5 不做 GPU 加速，仅用 CPU 推理；未来 Phase 11+ 可考虑。
 
 > **2026-06-30 二轮检查后用途说明**：[D7 修订](../DECISIONS.md) 切回 JNI 后，这个 android-arm64 包用作**自编译 libllama.so + libggml.so 的源**（解包取 .so，或基于其编译参数自行编译），不再作为 KSU 模块内 llama-server 二进制使用。参考 [llama.android 官方 JNI 模块](https://github.com/ggml-org/llama.cpp/tree/master/examples/llama.android) + [ToolNeuron `InferenceService.kt` + `InferenceClient.kt`](https://github.com/Siddhesh2377/ToolNeuron)（位于 `service/inference/` 目录）（[X2 修正](../DECISIONS.md)）。
 
@@ -88,7 +88,7 @@ URL: https://github.com/Xposed-Modules-Repo/tn.amin.phantom_mic/releases/downloa
 
 确认是 LSPosed 官方认证模块，非个人野仓库。
 
-> **⚠️ 2026-06-30 二轮检查后风险升级**：[D14](../DECISIONS.md) 标记 v2.0 自 2024-07 发布至本次设计冻结已近 2 年未更新，上游可能停滞，HyperOS 2（Android 15）兼容性未验证。Phase 1 启动前先去 [上游仓库](https://github.com/Xposed-Modules-Repo/tn.amin.phantom_mic/releases) 复查活跃度。
+> **⚠️ 2026-06-30 二轮检查后风险升级 + 第四轮 web 核实确认**：[D14](../DECISIONS.md) 标记 v2.0 自 2024-07 发布至本次设计冻结已近 2 年未更新，**第四轮 web 核实确认上游已停滞 23 个月**（自 2024-07-24 v2.0 后零更新），HyperOS 3（Android 15）兼容性未验证且无官方更新。Phase 1 已确认无新版本，需准备降级方案（详见 D14）。
 
 ---
 
@@ -96,23 +96,24 @@ URL: https://github.com/Xposed-Modules-Repo/tn.amin.phantom_mic/releases/downloa
 
 虽然依赖项全部可达，**实际运行中仍有 3 项真实风险**：
 
-### 风险 1：Phantom Mic 在 HyperOS 上的实际效果未验证（**风险升级为高**）
+### 风险 1：Phantom Mic 在 HyperOS 上的实际效果未验证（**风险升级为高，第四轮确认上游停滞**）
 
-- ⚠️ Phantom Mic v2.0 发布于 **2024-07**，至本次设计冻结（**2026-06-30**）**已近 2 年未更新**，**上游可能已停滞**（之前判断"活跃维护"是误判）
+- ⚠️ Phantom Mic v2.0 发布于 **2024-07**，至本次设计冻结（**2026-06-30**）**已近 2 年未更新**，**第四轮 web 核实确认上游已停滞 23 个月**（自 2024-07-24 v2.0 后零更新，之前判断"活跃维护"是误判）
 - ⚠️ 项目主要针对通用 Android，**未明确声明 HyperOS 兼容**
 - ⚠️ MIUI/HyperOS 的录音拦截涉及 AppOps、AudioPolicyManager、AudioFlinger 多层，native hook 单点能否覆盖全部？需真机实测
 - **缓解策略**：
-  - Phase 1 启动前先去上游 https://github.com/Xposed-Modules-Repo/tn.amin.phantom_mic/releases 复查是否有新版本，看 Issues 区是否有 HyperOS 2 / Android 15 反馈
+  - Phase 1 启动前先去上游 https://github.com/Xposed-Modules-Repo/tn.amin.phantom_mic/releases 复查是否有新版本（第四轮已确认无），看 Issues 区是否有 HyperOS 3 / Android 15 反馈
   - Phase 4 真机实测前准备 fallback——`appops set <uid> RECORD_AUDIO allow` shell 命令 + 双触发兜底
+  - **第四轮新增降级方案**（因上游已确认停滞）：评估 WhatsMicFix-LSPosed 改造 / XAudioCapture；最坏情况放弃锁屏唤醒仅亮屏可用；长期 Phase 11+ 可自行 fork 维护
   - 详见 [DECISIONS.md D14](../DECISIONS.md)
 
-### 风险 2：8GB 内存峰值仍有压力（**2026-06-30 二轮检查后重算**）
+### 风险 2：8GB 内存峰值仍有压力（**2026-06-30 二轮检查后重算 + 第三轮严格修正算术错误 E10**）
 
 - **二轮检查前**：原计算峰值约 7.5GB（系统 5GB + APK + sherpa + llama），3B 默认模型时峰值 8.43GB > 8GB
 - **二轮检查后**（[D1 修订](../DECISIONS.md) + [03_architecture_detail.md §6](./03_architecture_detail.md)）：
   - 默认模型从 3B 改为 **1.5B Q4_K_M**（~1GB）
-  - 默认 1.5B 配置下峰值 **6.77GB**（含 VAD+KWS 必须常驻），留 1.23GB headroom，**安全**
-  - 3B 模型（可选质量优先）峰值 7.67GB，仅留 330MB headroom，**风险高**，需 Phase 4 真机实测，OOM 则禁用 3B
+  - **第三轮严格重算后**（修正算术错误 E10）：默认 1.5B 配置下串行峰值约 **7.5GB** / 最坏叠加 **7.89GB**，留 **0.11-0.5GB headroom**，**紧张但可接受**（Stage 5 真机 24h 硬关卡）
+  - **3B 模型（可选质量优先）第三轮重算后峰值 8.59GB > 8GB，必 OOM，8GB 设备不可用**（[D1](../DECISIONS.md) 备选条件修订），需 Phase 11 启用 Adreno GPU 加速后才考虑
 - **缓解策略**：
   - LLM 推理串行化（ASR → LLM → TTS）
   - sherpa-onnx ASR/TTS 进程内共享 onnxruntime，省一份 .so 内存
@@ -129,7 +130,7 @@ URL: https://github.com/Xposed-Modules-Repo/tn.amin.phantom_mic/releases/downloa
 - **缓解策略**：
   - 参考 [llama.android 官方模块](https://github.com/ggml-org/llama.cpp/tree/master/examples/llama.android) 的 JNI 范式
   - 参考 [ToolNeuron `InferenceService.kt` + `InferenceClient.kt`](https://github.com/Siddhesh2377/ToolNeuron)（位于 `service/inference/` 目录）的工程实践（模型加载/卸载、流式 callback、AES-256-GCM 加密存储等）
-  - 锁版本到 b9844，避免 ABI 漂移（[D7](../DECISIONS.md)）
+  - 锁版本到 b9830，避免 ABI 漂移（[D7](../DECISIONS.md)）
   - Phase 1 优先打通最小路径（complete 单次生成），复杂特性（streamComplete 流式、function calling）后置
 
 ---
@@ -140,7 +141,7 @@ URL: https://github.com/Xposed-Modules-Repo/tn.amin.phantom_mic/releases/downloa
 
 ### 4.1 OpenCL + Adreno GPU 加速（未来）
 
-`llama-b9844-bin-win-opencl-adreno-arm64.zip`（Windows on Snapdragon）这个包证明 llama.cpp **支持 Adreno GPU 的 OpenCL 后端**。但 b9844 release **不提供 Android 版预编译包**。Android 上要启用需自行用 Snapdragon 工具链 Docker 镜像编译（启用 `GGML_OPENCL=ON` + `GGML_HEXAGON=ON`），产物为 `libggml-opencl.so` / `libggml-hexagon.so` 等，详见 llama.cpp docs/backend/snapdragon/README.md。**未来可启用 GPU 加速**，3B 模型 tok/s 可能翻倍。当前 MVP 先用 CPU，GPU 加速作为 Phase 11 之后的性能优化项（Phase 0-5 不做，仅 CPU 推理；与 [Phase 6 联网工具调用](./09_phase6_network_tools_design.md) 不冲突，是独立维度）。
+`llama-b9830-bin-win-opencl-adreno-arm64.zip`（Windows on Snapdragon）这个包证明 llama.cpp **支持 Adreno GPU 的 OpenCL 后端**。但 b9830 release **不提供 Android 版预编译包**。Android 上要启用需自行用 Snapdragon 工具链 Docker 镜像编译（启用 `GGML_OPENCL=ON` + `GGML_HEXAGON=ON`），产物为 `libggml-opencl.so` / `libggml-hexagon.so` 等，详见 llama.cpp docs/backend/snapdragon/README.md。**未来可启用 GPU 加速**，3B 模型 tok/s 可能翻倍。当前 MVP 先用 CPU，GPU 加速作为 Phase 11 之后的性能优化项（Phase 0-5 不做，仅 CPU 推理；与 [Phase 6 联网工具调用](./09_phase6_network_tools_design.md) 不冲突，是独立维度）。
 
 ### 4.2 Vocos 声码器（替代纯 VITS）
 
@@ -158,9 +159,9 @@ matcha-icefall-zh-baker + vocos-22khz-univ.onnx
 
 | 组件 | 版本 | 来源 URL | 用途 |
 |---|---|---|---|
-| llama.cpp | b9844 | github.com/ggml-org/llama.cpp/releases/tag/b9844 | LLM 推理源（自编译 libllama.so + libggml.so） |
-| llama.cpp android-arm64 二进制 | b9844 | .../download/b9844/llama-b9844-bin-android-arm64.tar.gz | 自编译参考源（解包取 .so，不再作 KSU 模块内 llama-server） |
-| llama.android 官方 JNI 模块 | b9844 | github.com/ggml-org/llama.cpp/tree/master/examples/llama.android | JNI wrapper 参考实现 |
+| llama.cpp | b9830 | github.com/ggml-org/llama.cpp/releases/tag/b9830 | LLM 推理源（自编译 libllama.so + libggml.so） |
+| llama.cpp android-arm64 二进制 | b9830 | .../download/b9830/llama-b9830-bin-android-arm64.tar.gz | 自编译参考源（解包取 .so，不再作 KSU 模块内 llama-server） |
+| llama.android 官方 JNI 模块 | b9830 | github.com/ggml-org/llama.cpp/tree/master/examples/llama.android | JNI wrapper 参考实现 |
 | ToolNeuron（参考样板） | - | github.com/Siddhesh2377/ToolNeuron | `InferenceService.kt` + `InferenceClient.kt`（位于 `service/inference/` 目录）JNI 范式参考（[X2 修正](../DECISIONS.md)） |
 | sherpa-onnx AAR | v1.13.3 | github.com/k2-fsa/sherpa-onnx/releases/tag/v1.13.3 | ASR/TTS/VAD/KWS 全栈 |
 | Qwen2.5-1.5B-Instruct GGUF Q4_K_M（默认） | - | huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF | 默认对话模型（[D1 修订](../DECISIONS.md)） |
@@ -206,7 +207,7 @@ matcha-icefall-zh-baker + vocos-22khz-univ.onnx
 
 ### 7.1 设计可行性
 
-**整体可行**。所有外部依赖 100% 验证可达（15/15）。核心组件（llama.cpp + sherpa-onnx + Qwen 模型 + llama.android JNI 模块 + ToolNeuron 参考样板）均为活跃维护的开源项目；**例外是 Phantom Mic**——v2.0 自 2024-07 起已近 2 年未更新，HyperOS 2 兼容性风险升级为高（详见 [风险 1](#风险-1phantom-mic-在-hyperos-上的实际效果未验证风险升级为高) 与 [DECISIONS.md D14](../DECISIONS.md)）。
+**整体可行**。所有外部依赖 100% 验证可达（15/15）。核心组件（llama.cpp + sherpa-onnx + Qwen 模型 + llama.android JNI 模块 + ToolNeuron 参考样板）均为活跃维护的开源项目；**例外是 Phantom Mic**——v2.0 自 2024-07 起已近 2 年未更新，**第四轮 web 核实确认上游已停滞 23 个月**，HyperOS 3 兼容性风险升级为高（详见 [风险 1](#风险-1phantom-mic-在-hyperos-上的实际效果未验证风险升级为高第四轮确认上游停滞) 与 [DECISIONS.md D14](../DECISIONS.md)）。
 
 ### 7.2 工程可行性
 
@@ -221,8 +222,8 @@ matcha-icefall-zh-baker + vocos-22khz-univ.onnx
 ### 7.3 运行可行性
 
 **8GB 内存紧张但可接受**（[03_architecture_detail.md §6](./03_architecture_detail.md) 重新核算后）：
-- **默认 1.5B 模型**：峰值 6.77GB，留 1.23GB headroom，**安全**
-- **可选 3B 模型**：峰值 7.67GB，仅留 330MB headroom，**风险高**，需 Phase 4 真机实测，OOM 则禁用 3B
+- **默认 1.5B 模型**：串行峰值约 7.5GB / 最坏叠加 7.89GB，留 0.11-0.5GB headroom，**紧张但可接受**（第三轮重算，[03 §6](./03_architecture_detail.md)）
+- **可选 3B 模型**：第三轮重算后峰值 8.59GB > 8GB，**必 OOM，8GB 设备不可用**（[D1](../DECISIONS.md) 备选条件修订），需 Phase 11 启用 Adreno GPU 加速后才考虑
 - MVP 阶段串行执行 ASR → LLM → TTS，避免并发峰值。模型 keep-alive 5min 自动卸载（VAD+KWS 不卸载）。
 
 ### 7.4 待用户决策的 4 件事（**全部已确认 + 二轮检查后新增 4 件**）
@@ -269,7 +270,7 @@ matcha-icefall-zh-baker + vocos-22khz-univ.onnx
 - [03_architecture_detail.md](./03_architecture_detail.md) — 详细架构（JNI 接口、状态机 CAS、内存预算）
 - [05_deploy_guide.md](./05_deploy_guide.md) / [06_lspoded_setup.md](./06_lspoded_setup.md) / [07_troubleshooting.md](./07_troubleshooting.md) — 部署/运维文档
 - [09_phase6_network_tools_design.md](./09_phase6_network_tools_design.md) ~ [12_phase9_multimodal_design.md](./12_phase9_multimodal_design.md) — Phase 6-9 四份扩展设计稿
-- [DECISIONS.md](../DECISIONS.md) — 决策清单（17 已确认 + 3 待讨论 + 7 已废弃）
+- [DECISIONS.md](../DECISIONS.md) — 决策清单（31 已确认 + 7 已废弃，第四轮 web 核实后修订）
 
 ❌ 未交付（按用户要求"先不要交付"）：
 - 任何代码（.kt / .cpp / .sh / .gradle）
