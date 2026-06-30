@@ -5,6 +5,11 @@
 > 依赖：Phase 2（语音链路）+ Phase 5（发布）完成  
 > 与主设计关系：[00_design_overview.md](./00_design_overview.md) §11 路线图的扩展
 
+> **2026-06-30 修订说明**（深度检查后第二轮调整）：
+> - 推理后端切回 JNI（[D7](../DECISIONS.md) + [X7](../DECISIONS.md)）：Phase 6 工具调用的 LLM function calling 通过 JNI 调用 LlamaEngine.kt，而非 HTTP 调用 llama-server
+> - 默认模型从 3B 改为 1.5B（[D1](../DECISIONS.md)）：影响 function calling 准确率，1.5B 可能不如 3B 稳定，需 Phase 6 真机测试
+> - 唤醒词改 sherpa-onnx KWS（[D23](../DECISIONS.md)）：本稿不直接涉及，但如提到唤醒词需更新表述
+
 ---
 
 ## 0. 设计目标
@@ -35,23 +40,25 @@ ConversationEngine
    │  (其他) → 落到 Stage 2      │
    └────────────────────────────┘
        ↓ 未命中
-   ┌────────────────────────────┐
-   │ Stage 2: LLM function call  │
-   │  把 4 个工具的 schema 喂给  │
-   │  llama-server /v1/chat/     │
-   │  completions with tools      │
-   │  LLM 决定调哪个或直接回答    │
-   └────────────────────────────┘
+   ┌────────────────────────────────────┐
+   │ Stage 2: LLM function call (JNI)   │
+   │  把 4 个工具的 schema 喂给          │
+   │  LlamaEngine.kt 的 complete()      │
+   │  或 streamComplete()，附带 tools   │
+   │  LLM 决定调哪个或直接回答            │
+   └────────────────────────────────────┘
        ↓
    Tool 执行 → 拿到结构化结果
        ↓
    LLM 组织语言 → TTS
 ```
 
-**Stage 1 + Stage 2 混合方案**的取舍：
-- Qwen2.5-3B 在结构化 function calling 上质量不稳，纯靠 LLM 决策会乱调工具
+**Stage 1 + Stage 2 混合方案**的取舍（[D17](../DECISIONS.md)）：
+- 默认 Qwen2.5-1.5B（[D1](../DECISIONS.md)）在结构化 function calling 上质量不稳，3B 可选但同样不保证，纯靠 LLM 决策会乱调工具
 - 纯关键词扩展性差，每个新工具要改正则
 - 混合方案：高频场景（天气/翻译/新闻）走关键词快速路径，长尾场景走 LLM
+
+> **备注（推理后端）**：Stage 2 不走 HTTP 调用 llama-server（[X7](../DECISIONS.md) 已废弃该路径），而是通过 JNI 调用 LlamaEngine.kt 的 `complete()` 或 `streamComplete()`。虽然 JNI 路径下不走 OpenAI 兼容的 `/v1/chat/completions` HTTP 接口，但 llama.cpp 的 chat template 仍支持 function calling 格式（参考 [ToolNeuron](https://github.com/Siddhesh2377/ToolNeuron) 的 LlamaEngine.kt 实现），即把 `tools` schema 拼到 prompt 里、解析模型输出中的 tool call 块。
 
 ---
 
@@ -70,7 +77,7 @@ ConversationEngine
 
 ## 3. 状态机扩展
 
-新增状态 `TOOL_RUNNING`：
+新增状态 `TOOL_RUNNING`（与 [03_architecture_detail.md §4](./03_architecture_detail.md) 的状态机保持一致，统一通过 CAS 原子转换 `AtomicReference.compareAndSet`）：
 
 ```
 IDLE → LISTENING → THINKING
@@ -84,10 +91,15 @@ IDLE → LISTENING → THINKING
               SPEAKING → COOLDOWN → IDLE
 ```
 
+**状态转移（CAS 原子转换）**：
+- `THINKING → TOOL_RUNNING`：通过 `state.compareAndSet(THINKING, TOOL_RUNNING)` 原子完成，避免并发抢占（如通知到达 Phase 7 与工具调用同时发生）
+- `TOOL_RUNNING → THINKING`：工具完成后通过 CAS 转回 THINKING
+- 与 [03_architecture_detail.md §4](./03_architecture_detail.md) 实现一致：`transitionTo(expected, new)` 统一封装 `compareAndSet`，禁止直接 `set()` 跳变
+
 **`TOOL_RUNNING` 期间**：
 - TTS 播报"正在查询..."安抚用户（避免 3-5 秒静默）
 - 唤醒词检测暂停（避免用户重复喊触发混乱）
-- 5 秒超时未返回则提示"查询失败"
+- 5 秒超时未返回则提示"查询失败"，CAS 回 IDLE
 
 ---
 
@@ -228,5 +240,5 @@ Settings → 网络
 | Q1 | 和风天气 v7 API 是否仍在免费档？ | 默认假设仍可用，Phase 6 实施前复查 |
 | Q2 | LibreTranslate 公共实例是否仍稳定？ | 默认假设仍可用，Phase 6 实施前复查 |
 | Q3 | Bing China Search API 是否仍可用？ | 默认假设仍可用，否则换 SearXNG |
-| Q4 | Qwen2.5-3B 是否已升级到 3.5/4B？影响 function calling 质量 | Phase 6 时换更强的模型 |
+| Q4 | 默认 Qwen2.5-1.5B（[D1](../DECISIONS.md)）的 function calling 是否够稳？3B 可选模式是否需在 Phase 6 真机验证不 OOM？ | Phase 6 真机测试 1.5B function calling 准确率，不达标则引导用户切 3B |
 | Q5 | 是否新增 0.5B 小模型做意图分类器？ | 暂不，混合方案够用 |

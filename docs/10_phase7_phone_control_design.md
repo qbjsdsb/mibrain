@@ -5,6 +5,13 @@
 > 依赖：Phase 6（联网工具调用，提供 Tool 接口 + 状态机扩展）+ Phase 5（发布）完成  
 > 与主设计关系：[00_design_overview.md](./00_design_overview.md) §11 路线图的扩展
 
+> **2026-06-30 修订说明**（深度检查后第二轮调整）：
+> - **S5 修复**：原 §2.4 `appops set POST_NOTIFICATIONS allow` 是错误判断——appops 无法授权 NotificationListenerService，应改为 `settings put secure enabled_notification_listeners` 或明示需用户手动授权
+> - **S6 修复**：微信通知回复路径改 A2A 协议（2026-06 起微信推进 A2A，Wear RemoteInput 逐步失效），详见 §2.3
+> - **M1 修复**：AppLauncherTool 改用 `monkey -p $pkg 1`（[D19](../DECISIONS.md) L1 仅启动 app）
+> - 推理后端切回 JNI（[D7](../DECISIONS.md)）
+> - 唤醒词改 sherpa-onnx KWS（[D23](../DECISIONS.md)）
+
 ---
 
 ## 0. 设计目标
@@ -14,7 +21,7 @@
 | Tool | 做什么 | root 价值 | 工程量 |
 |---|---|---|---|
 | SystemSettingsTool | 切换手电筒/亮度/静音等 | 部分 root，部分免 root | 小 |
-| NotificationReaderTool | 朗读通知 + 语音回复 | root 自动授权通知访问 | 中 |
+| NotificationReaderTool | 朗读通知 + 语音回复 | root 部分自动授权（详见 §2.4） | 中 |
 | AppLauncherTool (L1) | `am start` 启动 app | root 跳过权限 | 小 |
 | ScreenCaptureTool | 截屏 + 云端 vision 看屏 | root 一次授权后免再确认 | 中 |
 
@@ -93,7 +100,15 @@ state = COOLDOWN → IDLE
 
 **默认白名单**：微信 + QQ + 短信 + 来电 + 其他所有 app（用户可在 Settings 里关"其他 app"）。
 
-### 2.3 语音回复
+### 2.3 语音回复（S6 修复：A2A 路线）
+
+⚠️ **2026-06 起微信推进 A2A 协议**，原有的 Wear RemoteInput（RemoteInput + WearNotificationExtender 模拟手表回复）路径**逐步失效**。需要切到 A2A 路线或微信开放平台 API。
+本项目 Phase 7 的微信通知回复能力**降级为实验性**，需 Phase 7 真机验证：
+- 短期（Phase 7 MVP）：保留 Wear RemoteInput 作为兜底（如果仍可用）
+- 中期（Phase 7+）：调研 A2A 协议或微信开放平台 API 接入
+- 长期：跟随上游微信协议演进
+
+#### 2.3.1 短期兜底方案：Wear RemoteInput（原方案）
 
 ```
 用户："回复好的马上来"
@@ -102,18 +117,50 @@ ASR → "好的马上来"
   ↓
 检查最近 60s 内是否有可回复通知
   ↓
-找到通知的 remoteInput Action
+找到通知的 remoteInput Action（RemoteInput + WearNotificationExtender 模拟手表回复）
   ↓
 填入 "好的马上来" 触发 Action
   ↓
 TTS："已回复妈妈：好的马上来"
 ```
 
-**风险**：微信版本更新可能破坏 remoteInput Action 的可用性。Phase 7 实施时需测试当前微信版本。
+**风险**：微信版本更新可能破坏 remoteInput Action 的可用性。Phase 7 实施时需测试当前微信版本。2026-06 起随 A2A 推进，此路径预期逐步失效，仅作为短期兜底。
 
-### 2.4 root 价值
+#### 2.3.2 中期方案：A2A 协议调研方向
 
-`NotificationListenerService` 本身免 root，但用户需要去"设置 → 通知访问"里手动授权。root + KSU `appops set <uid> POST_NOTIFICATIONS allow` 可自动授权。
+- 调研微信 A2A（Agent-to-Agent）协议规范，确认是否对第三方 APK 开放
+- 若 A2A 不开放，调研微信开放平台（open.weixin.qq.com）的客服消息 API，评估是否能用 OAuth + 客服消息接口实现"语音回复转微信消息"
+- 中期方案需联网（与 Phase 6 联网开关联动），不再是纯本地路径
+- Phase 7+ 真机验证 A2A 可用性后再决定是否落地
+
+### 2.4 通知权限（S5 修复：appops 无法授权 NotificationListenerService）
+
+⚠️ **S5 修复（2026-06-30）**：原方案"`appops set <uid> POST_NOTIFICATIONS allow` 自动授权 NotificationListenerService"是错误判断，详见顶部修订说明。
+
+**正确认知**：通知相关存在两种独立权限，授权路径不同：
+
+| 权限 | 用途 | 存储位置 | root 能否自动 |
+|---|---|---|---|
+| POST_NOTIFICATIONS（Android 13+ 运行时权限） | app 自身在前台显示通知 | appops | ✅ 可，KSU `post-fs-data.sh` 用 `appops set <uid> OP_POST_NOTIFICATIONS allow` 自动授权 |
+| NotificationListenerService 通知使用权 | 读取其他 app 的通知 | `Settings.Secure.ENABLED_NOTIFICATION_LISTENERS` | ❌ appops 无此能力，必须用户手动或 root 强制写 settings |
+
+**推荐方案（首选）**：APK 引导用户手动授权
+- 首次启用 NotificationReaderTool 时，弹出对话框引导用户去"设置 → 通知 → 通知使用权 → MiBrain"
+- 检测状态：读 `Settings.Secure.getString(contentResolver, "enabled_notification_listeners")`，判断是否包含 `com.mibrain/.service.MiBrainNotificationListener`
+- 未授权时禁用朗读功能 + TTS 提示"请先在系统设置里授予 MiBrain 通知使用权"
+
+**Fallback（root 强制，有副作用，仅高级用户）**：
+
+```bash
+# KSU post-fs-data.sh 或手动执行
+settings put secure enabled_notification_listeners com.mibrain/.service.MiBrainNotificationListener
+# 需重启 systemui 让 NotificationManagerService 重新读取
+pkill systemui
+# 或：am force-stop com.android.systemui
+```
+
+- ⚠️ 副作用：systemui 重启会闪一下状态栏；锁屏前执行可能失败；部分 HyperOS 版本会在下次开机时回滚此项
+- 不作为默认路径，仅作为 power user 的 escape hatch
 
 ### 2.5 状态机交互
 
@@ -125,21 +172,35 @@ TTS："已回复妈妈：好的马上来"
 
 ## 3. AppLauncherTool（L1：仅启动 app）
 
-### 3.1 实现
+### 3.1 实现（M1 修复：改用 `monkey -p`）
+
+⚠️ **M1 修复（2026-06-30）**：原方案 `am start -n $pkg/.MainActivity` 需预知 LAUNCHER activity 名，匹配困难。改用 `monkey -p $pkg 1`（[D19](../DECISIONS.md) L1 仅启动 app），monkey 自动找 LAUNCHER activity。
 
 ```kotlin
-fun launch(appName: String): Boolean {
-    val pkg = resolvePackageName(appName)  // 从已装 app 列表匹配
-    if (pkg == null) {
-        tts.speak("没找到 $appName 这个应用")
-        return false
+class AppLauncherTool {
+    fun launch(appName: String): Boolean {
+        val pkg = resolvePackageName(appName)  // 从已装 app 列表匹配
+        if (pkg == null) {
+            tts.speak("没找到 $appName 这个应用")
+            return false
+        }
+        // M1 修复：monkey -p 自动找 LAUNCHER activity，不需预知 activity 名
+        val cmd = "monkey -p $pkg 1"
+        val result = SuShell.execute(cmd)  // root 调用
+        val ok = result.success && result.output.contains("Events injected")
+        if (ok) {
+            tts.speak("已打开 $appName")
+        } else {
+            tts.speak("打开 $appName 失败")
+        }
+        return ok
     }
-    val cmd = "am start -n $pkg/.MainActivity"  // 或 monkey 启动
-    Shell.exec(cmd)  // root 调用
-    tts.speak("已打开 $appName")
-    return true
 }
 ```
+
+**优点**：不需要知道具体 activity 名（monkey 自动找 LAUNCHER activity）。
+**缺点**：monkey 命令输出可能有噪声，需用 `Events injected` 字符串判定成功。
+**替代方案**：`am start -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -n $pkg/$launcher_activity`，但需先 query LAUNCHER activity，工程量更大，L1 不采用。
 
 ### 3.2 应用名匹配
 
@@ -256,6 +317,8 @@ Settings → 手机控制
 
 ## 6. 数据流时序（一次通知朗读 + 回复）
 
+> 以下时序对应 §2.3.1 短期兜底方案（Wear RemoteInput）。若 Wear RemoteInput 已失效（详见 §2.3 S6 风险），回复环节降级为"只朗读，不回复"。
+
 ```
 T=0   微信来通知："妈妈：我到了"
 T=0.1 NotificationListenerService.onNotificationPosted
@@ -266,7 +329,7 @@ T=2   播放完毕
 T=2.5 state = COOLDOWN → IDLE
 T=5   用户："回复好的马上来"
 T=6   ASR → "好的马上来"
-T=6   找最近 60s 通知的 remoteInput Action
+T=6   找最近 60s 通知的 remoteInput Action（Wear RemoteInput 短期兜底）
 T=6.5 填入 "好的马上来" 触发 Action
 T=7   TTS："已回复妈妈：好的马上来"
 T=9   state = IDLE
@@ -306,7 +369,8 @@ T=9   state = IDLE
 
 | 风险 | 概率 | 影响 | 缓解 |
 |---|---|---|---|
-| 微信 remoteInput Action 在新版被禁 | 高 | 中 | Phase 7 实施时测试当前微信版本；不可用时降级为"只朗读，不回复" |
+| 微信 Wear RemoteInput 因 A2A 推进而逐步失效 | 高 | 中 | 短期保留 Wear RemoteInput 兜底（详见 §2.3.1）；中期切 A2A 协议或微信开放平台 API（详见 §2.3.2）；不可用时降级为"只朗读，不回复" |
+| NotificationListenerService 无法 root 自动授权（S5） | 高 | 中 | appops 仅授权 POST_NOTIFICATIONS；通知使用权必须用户手动或 root 强制写 `settings put secure enabled_notification_listeners`（详见 §2.4）；推荐 APK 引导手动授权 |
 | HyperOS 改 `cmd` 命令路径 | 中 | 中 | 在 SystemSettingsTool 里做 fallback：先试 `cmd`，失败用 `settings`/`service` |
 | 截屏发云端泄漏隐私 | 中 | 高 | 强制 UI 确认 + 默认关闭 + 默认每次截屏前再 TTS 提示"正在截屏" |
 | 通知朗读打断正在进行的对话 | 中 | 低 | 排队机制（最多 3 条），SPEAKING 期间不朗读 |
@@ -328,8 +392,10 @@ T=9   state = IDLE
 
 | # | 问题 | 当前默认 |
 |---|---|---|
-| Q1 | 微信当前版本是否还暴露 remoteInput Action？ | 假设有，Phase 7 实施时实测 |
+| Q1 | 微信当前版本是否还暴露 Wear RemoteInput Action？2026-06 起 A2A 推进后是否仍可用？ | 假设短期仍可用，Phase 7 实施时实测；若失效则降级为"只朗读，不回复"并提前进入中期 A2A 调研 |
 | Q2 | HyperOS 上 `cmd connectivity start-softap` 是否有效？ | 假设有，Phase 7 实施时实测 |
 | Q3 | GLM-4V API 是否仍可用且价格可接受？ | 假设有，Phase 7 实施前复查 |
 | Q4 | 来电朗读的时机如何把握（响铃几次后/接听后/挂断后）？ | 默认响铃 3 次后朗读 |
 | Q5 | 是否需要为 NotificationReaderTool 单独的"勿扰时段"设置？ | 暂不做，用户可手动关闭 |
+| Q6 | NotificationListenerService 授权是否走"APK 引导手动授权"路径，还是提供 root 强制 fallback？ | 默认走手动引导（详见 §2.4），root 强制仅作 power user escape hatch |
+| Q7 | 微信 A2A 协议是否对第三方 APK 开放？若不开放，微信开放平台客服消息 API 是否可替代？ | 待 Phase 7+ 调研（详见 §2.3.2），不影响 Phase 7 MVP |

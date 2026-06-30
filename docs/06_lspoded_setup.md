@@ -2,6 +2,10 @@
 
 > 本文档说明如何在 LSPosed 里启用 Phantom Mic 模块，让 MiBrain 在 MIUI/HyperOS 后台也能稳定录音。
 
+> **2026-06-30 修订说明**：
+> - Phantom Mic 风险升级为高（[D14](../DECISIONS.md)）：v2.0 自 2024-07 发布至本次设计冻结已近 2 年未更新，HyperOS 2 兼容性未验证。Phase 1 启动前先去 [上游仓库](https://github.com/Xposed-Modules-Repo/tn.amin.phantom_mic/releases) 复查活跃度
+> - 唤醒词改 sherpa-onnx KWS（[D23](../DECISIONS.md)）：弃用 openWakeWord，本文件 §5.3 测试用"hey jarvis"仍有效
+
 ---
 
 ## 1. 前置条件
@@ -20,6 +24,8 @@ ls /data/adb/lspd
 ```
 
 或打开 LSPosed Manager，主界面应该显示"激活"。
+
+⚠️ Phantom Mic v2.0 自 2024-07 发布至本次设计冻结（2026-06-30）已近 2 年未更新，上游活跃度存疑。Phase 1 启动前先去 [上游仓库](https://github.com/Xposed-Modules-Repo/tn.amin.phantom_mic/releases) 复查是否有新版本或 HyperOS 2 / Android 15 兼容性反馈（[D14](../DECISIONS.md)）。
 
 ---
 
@@ -42,6 +48,8 @@ ls /data/adb/lspd
 # 在电脑上
 wget https://github.com/Xposed-Modules-Repo/tn.amin.phantom_mic/releases/download/3-2.0/PhantomMic-2.0.apk
 ```
+
+⚠️ 如果上游已发布新版本（v3+），优先用新版本。Phase 1 启动前先复查（[D14](../DECISIONS.md)）。
 
 SHA256 校验（Phase 4 真机验证后填入）：
 
@@ -115,7 +123,7 @@ adb logcat | grep -i phantom
 1. 打开 MiBrain，启用监听
 2. 锁屏
 3. 等 30 秒
-4. 说"hey jarvis"
+4. 说"hey jarvis"（唤醒词由 sherpa-onnx KWS 检测，[D23](../DECISIONS.md)；MVP 仍用英文 hey_jarvis，[D2](../DECISIONS.md)）
 5. 应该能正常唤醒
 
 如果唤不醒：
@@ -129,9 +137,14 @@ adb logcat | grep -i phantom
 
 ### 6.1 HyperOS 2 (Android 15) 兼容性问题
 
-Phantom Mic 项目主要测试到 Android 13，Android 14+ 行为不确定。
+⚠️ **风险升级**（[D14](../DECISIONS.md)）：Phantom Mic v2.0 自 2024-07 发布至本次设计冻结已近 2 年未更新，HyperOS 2（Android 15）兼容性未验证，风险从"中"升级为"高"。
 
-如果 Phantom Mic 在 HyperOS 2 上无效：
+进入 Phase 1 启动前先复查：
+1. 去 https://github.com/Xposed-Modules-Repo/tn.amin.phantom_mic/releases 看是否有新版本
+2. 看 Issues 区是否有 HyperOS 2 / Android 15 兼容性反馈
+3. 如果上游确认停滞，按以下方案 B/C 之一替代
+
+如果 Phase 4 真机验证 Phantom Mic 在 HyperOS 2 上无效：
 
 **方案 A：降级到 HyperOS 1（不推荐）**
 - HyperOS 1 基于 Android 12/13
@@ -216,3 +229,4 @@ LSPosed 配置界面的截图会在 Phase 4 真机测试时补充到 `docs/asset
 | HyperOS 升级后 hook 失效 | 中 | 升级前先验证 |
 | LSPosed 框架本身被检测 | 低 | 一般 App 不检测 |
 | 同时装多个录音 hook 冲突 | 中 | 只装一个 |
+| Phantom Mic 上游停滞 / HyperOS 2 不兼容 | 高 | v2.0 已近 2 年未更新（[D14](../DECISIONS.md)）；Phase 1 启动前先复查上游活跃度；Phase 4 真机验证后准备 fallback（appops + 双触发兜底） |

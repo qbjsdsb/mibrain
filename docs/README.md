@@ -5,7 +5,7 @@
 | 文件 | 内容 | 状态 |
 |---|---|---|
 | [00_design_overview.md](./00_design_overview.md) | 完整设计文档（架构、组件、路线图） | ✅ |
-| [01_feasibility_verification.md](./01_feasibility_verification.md) | 可行性验证报告（10/10 依赖项实测可达） | ✅ |
+| [01_feasibility_verification.md](./01_feasibility_verification.md) | 可行性验证报告（15/15 依赖项实测可达，含 3 项已弃用） | ✅ |
 | [02_second_review.md](./02_second_review.md) | 第二轮严谨审视（5 个新发现 + 修订） | ✅ |
 | [03_architecture_detail.md](./03_architecture_detail.md) | 详细架构与时序图（进程拓扑、协议、状态机） | ✅ |
 | 04_build_guide.md | 编译指南 | ⏳ Phase 1 |
@@ -17,6 +17,7 @@
 | [10_phase7_phone_control_design.md](./10_phase7_phone_control_design.md) | Phase 7 手机控制类工具设计（4 工具） | ✅ 草案 |
 | [11_phase8_platform_design.md](./11_phase8_platform_design.md) | Phase 8 平台化能力设计（API/Widget/MCP） | ✅ 草案 |
 | [12_phase9_multimodal_design.md](./12_phase9_multimodal_design.md) | Phase 9 多模态设计（OCR + 看图对话） | ✅ 草案 |
+| [13_phase10_ux_enhancements_design.md](./13_phase10_ux_enhancements_design.md) | Phase 10 用户体验增强（多用户/儿童/i18n/a11y/音频路由/全局暂停） | ✅ 草案 |
 
 ## 当前阶段
 

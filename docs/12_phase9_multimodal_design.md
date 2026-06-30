@@ -5,6 +5,13 @@
 > 依赖：Phase 6（联网开关，强制开启）+ Phase 5（发布）完成  
 > 与主设计关系：[00_design_overview.md](./00_design_overview.md) §11 路线图的扩展
 
+> **2026-06-30 修订说明**（深度检查后第二轮调整）：
+> - **S9 修复**：状态机加 COOLDOWN 过渡，IMAGE_CAPTURING 完成后应通过 COOLDOWN 回 IDLE（与 [03_architecture_detail.md §4](./03_architecture_detail.md) 一致）
+> - 推理后端切回 JNI（[D7](../DECISIONS.md)）
+> - 默认模型从 3B 改为 1.5B（[D1](../DECISIONS.md)）
+> - 多模态视觉 API 选 GLM-4V（[D20](../DECISIONS.md)）
+> - 模型路径改 DE 加密区（[D21](../DECISIONS.md)）
+
 ---
 
 ## 0. 设计目标
@@ -54,15 +61,21 @@
   ↓ ASR → "这是什么药"
   ↓ ToolRouter → 关键词"这是什么" → ImageChatTool, mode=single
   ↓ NetworkGate check (开关必须开)
-  ↓ state = TOOL_RUNNING
+  ↓ state = TOOL_RUNNING (CAS: IDLE → TOOL_RUNNING)
   ↓ TTS："好的，请拍照"
+  ↓ state = IMAGE_CAPTURING (CAS: TOOL_RUNNING → IMAGE_CAPTURING)
   ↓ 启动相机 intent
   ↓ 用户拍完照返回
+  ↓ state = TOOL_RUNNING (CAS: IMAGE_CAPTURING → TOOL_RUNNING)
   ↓ 图片转 base64
-  ↓ 调 vision API: "What is this? {image}"
-  ↓ LLM 组织语言
+  ↓ 调 vision API: "What is this? {image}"（GLM-4V，[D20](../DECISIONS.md)）
+  ↓ state = THINKING (CAS: TOOL_RUNNING → THINKING)
+  ↓ LlamaEngine (JNI) 组织语言（[D7](../DECISIONS.md)）
+  ↓ state = SPEAKING (CAS: THINKING → SPEAKING，首 token 出)
   ↓ TTS："这是一盒布洛芬缓释胶囊..."
-  ↓ state = IDLE
+  ↓ 播放完毕 + 500ms
+  ↓ state = COOLDOWN (CAS: SPEAKING → COOLDOWN)
+  ↓ state = IDLE (CAS: COOLDOWN → IDLE)
 ```
 
 ### 3.2 看图对话（Cap 3）
@@ -71,19 +84,26 @@
 用户："看图对话"
   ↓ ASR → "看图对话"
   ↓ ToolRouter → 关键词"看图对话" → ImageChatTool, mode=multi
-  ↓ state = TOOL_RUNNING
+  ↓ state = TOOL_RUNNING (CAS: IDLE → TOOL_RUNNING)
   ↓ TTS："好的，请拍照，拍完我们可以聊"
+  ↓ state = IMAGE_CAPTURING (CAS: TOOL_RUNNING → IMAGE_CAPTURING)
   ↓ 启动相机 intent
   ↓ 用户拍完照返回
+  ↓ state = TOOL_RUNNING (CAS: IMAGE_CAPTURING → TOOL_RUNNING)
   ↓ 图片转 base64，加入对话上下文
   ↓ 进入多轮对话循环:
-  │   TTS："图已加载，你想问什么？"
+  │   state = THINKING (CAS: TOOL_RUNNING → THINKING)
+  │   调 vision API: "<image> + history + 用户问题"（GLM-4V，[D20](../DECISIONS.md)）
+  │   LlamaEngine (JNI) 回答（[D7](../DECISIONS.md)）
+  │   state = SPEAKING (CAS: THINKING → SPEAKING)
+  │   TTS："图已加载，你想问什么？" / "图里有 3 个人..."
+  │   state = COOLDOWN (CAS: SPEAKING → COOLDOWN，播放完毕 + 500ms)
+  │   state = LISTENING (CAS: COOLDOWN → LISTENING，多轮接续听)
   │   用户："图里有多少人"
   │   ASR → 文本
-  │   调 vision API: "<image> + history + 用户问题"
-  │   LLM 回答 → TTS
   │   继续/退出？
-  ↓ 用户说"退出" → 退出多轮，state = IDLE
+  ↓ 用户说"退出" → 退出多轮
+  ↓ state = COOLDOWN → IDLE (CAS 串)
 ```
 
 ### 3.3 多轮上下文管理
@@ -99,6 +119,8 @@
 
 ## 4. Vision API 选型
 
+> 决策依据：[D20 多模态视觉 API](../DECISIONS.md)
+
 | API | 优势 | 价格 | 默认 |
 |---|---|---|---|
 | GLM-4V（智谱） | 国内访问稳，中文好，多模态质量不错 | 收费 | ✅ 默认 |
@@ -107,6 +129,8 @@
 | Qwen-VL | 国产，部分场景质量好 | 部分免费 | 备选 |
 
 **与 Phase 7 ScreenCaptureTool 共享配置**：用户在 Settings 里配置一次 vision API key 即可，两个功能共用。
+
+> 注：本节仅指**多模态视觉 API**（看图识别）。本地 LLM 对话推理（如组织语言、多轮对话上下文）走 JNI 调用 `LlamaEngine`（[D7](../DECISIONS.md)），不走 HTTP。
 
 ---
 
@@ -152,29 +176,96 @@ Settings → 多模态
 
 ## 7. 状态机扩展
 
-新增状态 `IMAGE_CAPTURING`：
+> 与 [03_architecture_detail.md §4](./03_architecture_detail.md) 状态机一致（S9 修复）。
+> 新增状态 `IMAGE_CAPTURING`，并在拍照完成后通过 `TOOL_RUNNING → THINKING → SPEAKING → COOLDOWN → IDLE` 完整闭环，**不能直接 `IMAGE_CAPTURING → IDLE`**（除非 60s 超时兜底）。
+
+完整状态机（含 Phase 9 多模态分支）：
+
+```
+IDLE --(用户主动触发 ImageChatTool)--> TOOL_RUNNING
+TOOL_RUNNING --(需要拍照)--> IMAGE_CAPTURING
+IMAGE_CAPTURING --(用户拍完)--> TOOL_RUNNING
+IMAGE_CAPTURING --(60s 超时)--> IDLE
+TOOL_RUNNING --(工具完成)--> THINKING
+THINKING --(首 token 出)--> SPEAKING
+SPEAKING --(播放完毕 + 500ms)--> COOLDOWN
+COOLDOWN --(立即)--> IDLE
+(SPEAKING，多轮模式) --> COOLDOWN --> LISTENING  # 多轮对话接续听
+```
+
+状态图：
 
 ```
 IDLE → LISTENING → THINKING
                      ↓
               (路由到 ImageChatTool?)
                      ↓
+              TOOL_RUNNING (TTS 提示 + 准备拍照)
+                     ↓ (需要拍照)
               IMAGE_CAPTURING (相机打开，等待用户拍照)
                      ↓ 用户拍完返回
               TOOL_RUNNING (调 vision API)
                      ↓
-              THINKING (LLM 组织语言)
+              THINKING (LlamaEngine (JNI) 组织语言)
+                     ↓ (首 token 出)
+              SPEAKING → COOLDOWN (播放完毕 + 500ms)
                      ↓
-              SPEAKING → ...
-              ↓ (多轮模式)
+                 IDLE (单轮模式)
+                     ↓ (多轮模式)
               LISTENING (等下一轮问题)
+```
+
+### CAS 原子转换（解决 M4 并发抢占）
+
+所有状态转换通过 `AtomicReference.compareAndSet`，与 [03_architecture_detail.md §4](./03_architecture_detail.md) 一致：
+
+```kotlin
+private val state = AtomicReference(ConversationState.IDLE)
+
+fun transitionTo(expected: ConversationState, new: ConversationState): Boolean {
+    return state.compareAndSet(expected, new)
+}
+```
+
+拍照路径示例：
+
+```kotlin
+// 用户主动触发 ImageChatTool（语音或 UI 按钮）
+fun onImageChatTriggered() {
+    if (transitionTo(ConversationState.IDLE, ConversationState.TOOL_RUNNING)) {
+        // 成功转 TOOL_RUNNING，进入拍照流程
+        tts.speak("好的，请拍照")
+        transitionTo(ConversationState.TOOL_RUNNING, ConversationState.IMAGE_CAPTURING)
+        launchCameraIntent()
+    }
+}
+
+// 用户拍完照返回
+fun onImageCaptured(imagePath: String) {
+    if (transitionTo(ConversationState.IMAGE_CAPTURING, ConversationState.TOOL_RUNNING)) {
+        // 成功转 TOOL_RUNNING，调 vision API
+        val visionResult = glm4vClient.recognize(imagePath.toBase64())
+        transitionTo(ConversationState.TOOL_RUNNING, ConversationState.THINKING)
+        llamaEngine.streamComplete(visionResult, ...) // LlamaEngine (JNI)
+        // 首 token 出 → SPEAKING → COOLDOWN → IDLE（由推理/TTS 回调推进）
+    }
+}
+
+// 60s 拍照超时兜底
+fun onCaptureTimeout() {
+    // 强制回 IDLE，丢弃本次拍照
+    if (transitionTo(ConversationState.IMAGE_CAPTURING, ConversationState.IDLE)) {
+        tts.speak("超时未拍照，已取消")
+    }
+}
 ```
 
 **`IMAGE_CAPTURING` 期间**：
 - TTS 暂停
-- 唤醒词检测暂停
-- 用户可点击"取消"返回 IDLE
-- 60 秒未拍照超时 → 提示"超时未拍照，已取消"
+- 唤醒词检测暂停（sherpa-onnx KWS，[D23](../DECISIONS.md)）
+- 用户可点击"取消"返回 IDLE（CAS：`IMAGE_CAPTURING → IDLE`）
+- 60 秒未拍照超时 → CAS 强制回 IDLE → TTS 提示"超时未拍照，已取消"
+- **不能直接 `IMAGE_CAPTURING → SPEAKING`**：拍照完成必须先经 `TOOL_RUNNING → THINKING → SPEAKING → COOLDOWN → IDLE` 完整闭环
 
 ---
 
