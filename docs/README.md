@@ -13,6 +13,10 @@
 | [06_lspoded_setup.md](./06_lspoded_setup.md) | LSPosed 配置指南（Phantom Mic 详解） | ✅ |
 | [07_troubleshooting.md](./07_troubleshooting.md) | 故障排查（7 大类故障 + 排查流程） | ✅ |
 | 08_performance_bench.md | 性能基准 | ⏳ Phase 5 |
+| [09_phase6_network_tools_design.md](./09_phase6_network_tools_design.md) | Phase 6 联网工具调用设计（开关 + 4 工具） | ✅ 草案 |
+| [10_phase7_phone_control_design.md](./10_phase7_phone_control_design.md) | Phase 7 手机控制类工具设计（4 工具） | ✅ 草案 |
+| [11_phase8_platform_design.md](./11_phase8_platform_design.md) | Phase 8 平台化能力设计（API/Widget/MCP） | ✅ 草案 |
+| [12_phase9_multimodal_design.md](./12_phase9_multimodal_design.md) | Phase 9 多模态设计（OCR + 看图对话） | ✅ 草案 |
 
 ## 当前阶段
 
@@ -32,4 +36,8 @@
 6. [05_deploy_guide.md](./05_deploy_guide.md) — 部署指南
 7. [06_lspoded_setup.md](./06_lspoded_setup.md) — LSPosed 配置
 8. [07_troubleshooting.md](./07_troubleshooting.md) — 故障排查
-9. [../DECISIONS.md](../DECISIONS.md) — 决策清单
+9. [09_phase6_network_tools_design.md](./09_phase6_network_tools_design.md) — Phase 6 联网工具调用设计
+10. [10_phase7_phone_control_design.md](./10_phase7_phone_control_design.md) — Phase 7 手机控制设计
+11. [11_phase8_platform_design.md](./11_phase8_platform_design.md) — Phase 8 平台化设计
+12. [12_phase9_multimodal_design.md](./12_phase9_multimodal_design.md) — Phase 9 多模态设计
+13. [../DECISIONS.md](../DECISIONS.md) — 决策清单

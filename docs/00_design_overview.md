@@ -440,6 +440,33 @@ mibrain/                                    # 仓库根
 - [ ] 演示视频
 - [ ] Issue 模板
 
+### Phase 6：联网工具调用（设计草案 [09_phase6_network_tools_design.md](./09_phase6_network_tools_design.md)）
+- [ ] 全局联网开关 + UI 设置
+- [ ] Tool 接口 + ToolRouter + NetworkGate 基础设施
+- [ ] 4 个联网工具：WeatherTool / TranslateTool / WebSearchTool / NewsTool
+- [ ] 状态机扩展（新增 TOOL_RUNNING 状态）
+- **验收**：开关打开后，说"明天天气"能联网查询并语音回答
+
+### Phase 7：手机控制类（设计草案 [10_phase7_phone_control_design.md](./10_phase7_phone_control_design.md)）
+- [ ] SystemSettingsTool（手电筒/亮度/静音等 10+ 设置）
+- [ ] NotificationReaderTool（朗读 + 语音回复）
+- [ ] AppLauncherTool L1（仅启动 app）
+- [ ] ScreenCaptureTool（截屏 + vision API）
+- **验收**：锁屏时来微信通知能朗读并语音回复
+
+### Phase 8：平台化能力（设计草案 [11_phase8_platform_design.md](./11_phase8_platform_design.md)）
+- [ ] Cap 1: 本地 API 暴露（端口配置 + 限流 + token 计数 + LAN 选项）
+- [ ] Cap 3: 桌面小组件（一键对话 / 一键听写 / 状态卡）
+- [ ] Cap 4: MCP 协议支持（暴露 8 个 MCP 工具给桌面端）
+- **验收**：桌面端 Claude Desktop 能通过 MCP 调用手机上的 MiBrain 能力
+
+### Phase 9：多模态（设计草案 [12_phase9_multimodal_design.md](./12_phase9_multimodal_design.md)）
+- [ ] ImageChatTool（单轮 OCR + 多轮看图对话）
+- [ ] 相机 intent + 图片 base64 处理
+- [ ] 多轮上下文管理
+- [ ] 状态机扩展（新增 IMAGE_CAPTURING 状态）
+- **验收**：拍照后能多轮对话问图的内容
+
 ---
 
 ## 12. 知识产权与许可

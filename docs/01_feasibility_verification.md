@@ -109,7 +109,7 @@ URL: https://github.com/Xposed-Modules-Repo/tn.amin.phantom_mic/releases/downloa
 
 `llama-b9844-bin-win-opencl-adreno-arm64.zip` 这个包证明 llama.cpp **支持 Adreno GPU 的 OpenCL 后端**。
 
-虽然 Windows 标签，但 Linux/Android 同一份代码也能编。**未来可启用 GPU 加速**，3B 模型 tok/s 可能翻倍。当前 MVP 先用 CPU，后续作为 Phase 6 性能优化。
+虽然 Windows 标签，但 Linux/Android 同一份代码也能编。**未来可启用 GPU 加速**，3B 模型 tok/s 可能翻倍。当前 MVP 先用 CPU，GPU 加速作为 Phase 5 之后的性能优化项（与 [Phase 6 联网工具调用](./09_phase6_network_tools_design.md) 不冲突，是独立维度）。
 
 ### 4.2 Vocos 声码器（替代纯 VITS）
 
@@ -152,7 +152,7 @@ matcha-icefall-zh-baker + vocos-22khz-univ.onnx
 | LSPosed 双 scope 架构 | 简化为"装现成 Phantom Mic" | 已验证 Phantom Mic v2.0 完整覆盖 native hook，无需自写 |
 | 自写 llama.cpp JNI | ~~fork ToolNeuron 的 `LlamaEngine.kt`~~ → 改用 llama-server 二进制 + HTTP 调用 | 第二轮审视发现 ToolNeuron 是 C++ + JNI 非 Kotlin；fork LlamaEngine 路径被 [X2 废弃](../DECISIONS.md)（详见 [02_second_review.md 发现 1](./02_second_review.md)） |
 
-### 6.2 可选增强（Phase 6）
+### 6.2 可选性能增强（Phase 5 之后，独立于 Phase 6-9 路线图）
 
 | 增强项 | 价值 | 实现路径 |
 |---|---|---|

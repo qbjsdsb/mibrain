@@ -103,6 +103,42 @@
 - **说明**: Phase 3 时需采集 100+ 句"嘿小脑"样本
 - **状态**: 待 Phase 3
 
+### ✅ D16. 联网开关语义
+- **选择**: 全局开关（设置里一个总开关 + 每个工具子开关）
+- **理由**: 简单直接，用户可控；保留"完全离线"默认模式作为卖点
+- **状态**: 已确认（Phase 6 设计 [09_phase6_network_tools_design.md](./docs/09_phase6_network_tools_design.md) §4）
+- **日期**: 2026-06-30
+
+### ✅ D17. 工具调用机制
+- **选择**: 混合方案（关键词正则优先 + 兜底走 LLM function calling）
+- **理由**: Qwen2.5-3B 在结构化 function calling 上不稳；纯关键词扩展性差
+- **状态**: 已确认（Phase 6 设计 [09_phase6_network_tools_design.md](./docs/09_phase6_network_tools_design.md) §1）
+- **日期**: 2026-06-30
+
+### ✅ D18. 位置获取方式
+- **选择**: GPS 定位（Android LocationManager）
+- **理由**: 最准，root 可强制授定位权限
+- **状态**: 已确认（Phase 6 设计 [09_phase6_network_tools_design.md](./docs/09_phase6_network_tools_design.md) §7）
+- **日期**: 2026-06-30
+
+### ✅ D19. AppLauncherTool 范围
+- **选择**: L1 仅启动 app（不做跳转/填文本/自动点击）
+- **理由**: UI 自动化在 MIUI 上极不稳定，L1 最稳，工程量最小
+- **状态**: 已确认（Phase 7 设计 [10_phase7_phone_control_design.md](./docs/10_phase7_phone_control_design.md) §3）
+- **日期**: 2026-06-30
+
+### ❌ X6. 插件系统（用户写 Tool.kt 热加载）
+- **说明**: Phase 8 候选能力 Cap 2，用户决策跳过
+- **废弃原因**: DexClassLoader + 反射的安全风险大，沙箱实现复杂，不符合当前阶段优先级
+- **废弃日期**: 2026-06-30
+- **替代方案**: 用户/第三方通过 Phase 8 Cap 1 的本地 API 暴露（8080 端口）或 Cap 4 MCP 协议扩展
+
+### ✅ D20. 多模态视觉 API
+- **选择**: 默认 GLM-4V（智谱），备选 GPT-4V/Claude/Qwen-VL
+- **理由**: 国内访问稳，中文好，多模态质量不错
+- **状态**: 已确认（Phase 7 ScreenCaptureTool + Phase 9 多模态共用）
+- **日期**: 2026-06-30
+
 ## 已废弃决策
 
 ### ❌ X1. Go daemon
