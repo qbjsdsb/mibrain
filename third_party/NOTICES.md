@@ -8,20 +8,25 @@
 - 仓库：https://github.com/ggml-org/llama.cpp
 - 版本：b9844
 - 许可：MIT License
-- 用途：本地 LLM 推理（GGUF 格式）
-- 文件：[licenses/llama.cpp-MIT.txt](./licenses/llama.cpp-MIT.txt)
+- 用途：本地 LLM 推理（GGUF 格式，作为 llama-server 二进制分发）
+- 许可文本：https://github.com/ggml-org/llama.cpp/raw/master/LICENSE
 
 ### sherpa-onnx
 - 仓库：https://github.com/k2-fsa/sherpa-onnx
 - 版本：v1.13.3
 - 许可：Apache License 2.0
 - 用途：流式 ASR、TTS、VAD、关键词检测
-- 文件：[licenses/sherpa-onnx-Apache-2.0.txt](./licenses/sherpa-onnx-Apache-2.0.txt)
+- 许可文本：https://github.com/k2-fsa/sherpa-onnx/raw/master/LICENSE
 
 ### ONNX Runtime
 - 仓库：https://github.com/microsoft/onnxruntime
 - 许可：MIT License
 - 用途：sherpa-onnx 推理后端
+- 许可文本：https://github.com/microsoft/onnxruntime/raw/main/LICENSE
+
+---
+
+> **许可文本存放策略**：当前阶段未在 `third_party/licenses/` 下保存完整许可文本副本，所有许可文本请访问上述上游仓库链接获取。Phase 1 进入正式分发（APK / KSU 模块 zip）前，会按各自许可证要求补充完整文本到 `third_party/licenses/`。
 
 ## 模型
 

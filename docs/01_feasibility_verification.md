@@ -69,12 +69,15 @@ URL: https://github.com/Xposed-Modules-Repo/tn.amin.phantom_mic/releases/downloa
 
 虽然依赖项全部可达，**实际运行中仍有 3 项真实风险**：
 
-### 风险 1：Phantom Mic 在 HyperOS 上的实际效果未验证
+### 风险 1：Phantom Mic 在 HyperOS 上的实际效果未验证（**风险升级为高**）
 
-- ✅ Phantom Mic 项目活跃（v2.0）
+- ⚠️ Phantom Mic v2.0 发布于 **2024-07**，至本次设计冻结（**2026-06-30**）**已近 2 年未更新**，**上游可能已停滞**（之前判断"活跃维护"是误判）
 - ⚠️ 项目主要针对通用 Android，**未明确声明 HyperOS 兼容**
 - ⚠️ MIUI/HyperOS 的录音拦截涉及 AppOps、AudioPolicyManager、AudioFlinger 多层，native hook 单点能否覆盖全部？需真机实测
-- **缓解策略**：在 Phase 4 稳定性测试阶段，准备一个 fallback 方案——`appops set <uid> RECORD_AUDIO allow` shell 命令 + 双触发兜底
+- **缓解策略**：
+  - Phase 1 启动前先去上游 https://github.com/Xposed-Modules-Repo/tn.amin.phantom_mic/releases 复查是否有新版本，看 Issues 区是否有 HyperOS 2 / Android 15 反馈
+  - Phase 4 真机实测前准备 fallback——`appops set <uid> RECORD_AUDIO allow` shell 命令 + 双触发兜底
+  - 详见 [DECISIONS.md D14](../DECISIONS.md)
 
 ### 风险 2：8GB 内存峰值仍有压力
 
@@ -85,14 +88,16 @@ URL: https://github.com/Xposed-Modules-Repo/tn.amin.phantom_mic/releases/downloa
   - sherpa-onnx ASR/TTS 进程内共享 onnxruntime，省一份 .so 内存
   - 监听 `onTrimMemory(TRIM_MEMORY_RUNNING_LOW)` 主动卸载 LLM
 
-### 风险 3：llama.cpp JNI 集成复杂度被低估
+### 风险 3：llama.cpp JNI 集成复杂度被低估（**此风险已被消除**）
+
+> **2026-06-30 更新**：第二轮审视（[02_second_review.md 发现 1](./02_second_review.md)）已废弃 JNI 路径，改用 llama-server 二进制 + HTTP 调用，本风险不再适用。原文保留如下供追溯。
 
 - ✅ 二进制可用
-- ⚠️ 但 llama.cpp 官方不提供 Java/Kotlin 绑定，**需要自己写 JNI 包装**
-- ⚠️ ToolNeuron 的 JNI 包装代码量约 1500+ 行 Kotlin，是项目最大的工程量
-- **缓解策略**：
-  - 直接 fork ToolNeuron 的 `LlamaEngine.kt` + 对应 C 文件（合规：MIT 许可）
-  - 锁版本到 b9844，避免 ABI 漂移
+- ⚠️ ~~但 llama.cpp 官方不提供 Java/Kotlin 绑定，**需要自己写 JNI 包装**~~
+- ⚠️ ~~ToolNeuron 的 JNI 包装代码量约 1500+ 行 Kotlin，是项目最大的工程量~~
+- ~~**缓解策略**~~（已被废弃）：
+  - ~~直接 fork ToolNeuron 的 `LlamaEngine.kt` + 对应 C 文件~~（[X2 废弃](../DECISIONS.md)）
+  - 锁版本到 b9844，避免 ABI 漂移（仍适用，但现在锁定的是 llama-server 二进制而非 JNI ABI）
 
 ---
 
@@ -123,7 +128,7 @@ matcha-icefall-zh-baker + vocos-22khz-univ.onnx
 | 组件 | 版本 | 来源 URL | 用途 |
 |---|---|---|---|
 | llama.cpp | b9844 | github.com/ggml-org/llama.cpp/releases/tag/b9844 | LLM 推理 |
-| llama.cpp android-arm64 二进制 | b9844 | .../download/b9844/llama-b9844-bin-android-arm64.tar.gz | APK 内嵌 .so |
+| llama.cpp android-arm64 二进制 | b9844 | .../download/b9844/llama-b9844-bin-android-arm64.tar.gz | KSU 模块内 llama-server 二进制（不内嵌 .so） |
 | sherpa-onnx AAR | v1.13.3 | github.com/k2-fsa/sherpa-onnx/releases/tag/v1.13.3 | ASR/TTS/VAD/KWS |
 | Qwen2.5-3B-Instruct GGUF Q4_K_M | - | huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF | 默认对话模型 |
 | Qwen2.5-1.5B-Instruct GGUF Q4_K_M | - | huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF | 低内存备选 |
@@ -145,7 +150,7 @@ matcha-icefall-zh-baker + vocos-22khz-univ.onnx
 |---|---|---|
 | 模型放 `/data/adb/mibrain/models/` | 改为 `app 内部存储 + 用户外部目录选择` | APK 需读模型，跨 SELinux 域访问 `/data/adb` 麻烦；用 SAF 让用户选目录更合规 |
 | LSPosed 双 scope 架构 | 简化为"装现成 Phantom Mic" | 已验证 Phantom Mic v2.0 完整覆盖 native hook，无需自写 |
-| 自写 llama.cpp JNI | fork ToolNeuron 的 `LlamaEngine.kt` | 1500+ 行代码量太大，借现成的合规且省时 |
+| 自写 llama.cpp JNI | ~~fork ToolNeuron 的 `LlamaEngine.kt`~~ → 改用 llama-server 二进制 + HTTP 调用 | 第二轮审视发现 ToolNeuron 是 C++ + JNI 非 Kotlin；fork LlamaEngine 路径被 [X2 废弃](../DECISIONS.md)（详见 [02_second_review.md 发现 1](./02_second_review.md)） |
 
 ### 6.2 可选增强（Phase 6）
 
@@ -161,30 +166,32 @@ matcha-icefall-zh-baker + vocos-22khz-univ.onnx
 
 ### 7.1 设计可行性
 
-**整体可行**。所有外部依赖 100% 验证可达，核心组件（llama.cpp + sherpa-onnx + Phantom Mic + Qwen 模型）均为活跃维护的开源项目。
+**整体可行**。所有外部依赖 100% 验证可达。核心组件（llama.cpp + sherpa-onnx + Qwen 模型）均为活跃维护的开源项目；**例外是 Phantom Mic**——v2.0 自 2024-07 起已近 2 年未更新，HyperOS 2 兼容性风险升级为高（详见 [风险 1](#风险-1phantom-mic-在-hyperos-上的实际效果未验证风险升级为高) 与 [DECISIONS.md D14](../DECISIONS.md)）。
 
 ### 7.2 工程可行性
 
 **可行但工作量大**。主要工程量集中在：
-1. llama.cpp JNI 包装（建议直接 fork ToolNeuron）
+1. ~~llama.cpp JNI 包装（建议直接 fork ToolNeuron）~~ → **已废弃**，改用 llama-server HTTP 客户端（详见 [02_second_review.md 发现 1](./02_second_review.md)）
 2. sherpa-onnx Kotlin API 集成（官方有完整 Kotlin API 文档）
-3. KSU 模块脚本 + appops 配置
+3. KSU 模块脚本 + appops 配置 + service.sh 启动 llama-server
 4. UI 层（Compose）
 
-预计工程量与 ToolNeuron 早期版本相当（约 2000-3000 行 Kotlin + 几百行 shell）。
+预计工程量比初版估算降低约 70%（跳过 JNI/C++），主要剩 sherpa-onnx 集成 + KSU 脚本 + UI 三块。
 
 ### 7.3 运行可行性
 
 **8GB 内存紧张但可接受**。MVP 阶段串行执行 ASR → LLM → TTS，避免并发峰值。模型 keep-alive 5min 自动卸载。
 
-### 7.4 待用户决策的 4 件事
+### 7.4 待用户决策的 4 件事（**全部已确认**）
+
+> **2026-06-30 更新**：原 4 个待决策项已全部在 [DECISIONS.md](../DECISIONS.md) 中确认。原稿保留如下供追溯。
 
 进入 Phase 1 之前，仍需用户决策：
 
-1. **GitHub 仓库归属**：用户名是？沙箱无法 push，需用户配合
-2. **是否同意 fork ToolNeuron 的 LlamaEngine.kt**（MIT 许可，合规）
-3. **默认模型**：Qwen2.5-3B（推荐，质量好）还是 Qwen2.5-1.5B（更省内存）？
-4. **项目名 "MiBrain" 是否最终确认**？
+1. **GitHub 仓库归属** → 已确认 `qbjsdsb/mibrain`（[D12](../DECISIONS.md)）
+2. ~~**是否同意 fork ToolNeuron 的 LlamaEngine.kt**~~ → 已废弃，改用 llama-server 二进制（[X2](../DECISIONS.md) + [D7](../DECISIONS.md)）
+3. **默认模型** → 已确认 Qwen2.5-3B-Instruct Q4_K_M，备选 1.5B（[D1](../DECISIONS.md)）
+4. **项目名 "MiBrain" 是否最终确认** → 已确认（[D4](../DECISIONS.md)）
 
 ---
 
@@ -207,8 +214,8 @@ matcha-icefall-zh-baker + vocos-22khz-univ.onnx
 ## 九、本阶段交付物清单
 
 ✅ 已交付：
-- [00_design_overview.md](file:///workspace/ai_assistant_design/00_design_overview.md) — 完整设计文档
-- [01_feasibility_verification.md](file:///workspace/ai_assistant_design/01_feasibility_verification.md) — 本验证报告
+- [00_design_overview.md](./00_design_overview.md) — 完整设计文档
+- [01_feasibility_verification.md](./01_feasibility_verification.md) — 本验证报告
 
 ❌ 未交付（按用户要求"先不要交付"）：
 - 任何代码

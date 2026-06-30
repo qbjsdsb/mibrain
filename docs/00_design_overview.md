@@ -8,13 +8,13 @@
 
 | 项 | 值 |
 |---|---|
-| 项目代号 | MiBrain（暂定） |
+| 项目名 | MiBrain（已确认，见 [D4](../DECISIONS.md)） |
 | 目标设备 | 红米 K50 Ultra（骁龙 8+ Gen 1，8GB RAM，Adreno 730，HyperOS） |
 | Root 方案 | KernelSU + ZygiskNext + LSPosed |
 | 用户硬约束 | 只能保证 KSU + ZygiskNext + LSP，其他能力不保证（不自编译内核、不改 ROM、不长期维护复杂 hook） |
 | 核心目标 | 离线、本地、隐私不出手机的语音助手 |
 | 开发语言 | Kotlin（APK）+ Shell（KSU 脚本）+ 现成 arm64 二进制 |
-| 当前阶段 | 设计阶段，**不交付任何代码** |
+| 当前阶段 | Phase 0：设计冻结（不交付代码，见 [README.md](../README.md)） |
 
 ---
 
@@ -53,7 +53,7 @@
 |---|---|---|---|
 | **ToolNeuron** | Siddhesh2377/ToolNeuron (258★, 927 commits) | 完整 Kotlin 架构、GGUF 加载、TTS/STT/RAG 全套 | 太重，927 commits 学习成本高；未针对 MIUI 优化；无 LSPosed hook |
 | **HostAI** | wannaphong/android-hostai (v1.0.4, alpha) | LiteRT-LM + GPU 加速 + OpenAI API | 只解决"模型服务"一层，无语音、无 hook |
-| **Phantom Mic** | Mino260806/PhantomMic (LSPosed) | native hook AudioRecord.cpp，成熟 | 只 hook 不提供调度 |
+| **Phantom Mic** | Xposed-Modules-Repo/tn.amin.phantom_mic (LSPosed 官方) | native hook AudioRecord.cpp，成熟 | 只 hook 不提供调度，用户自行安装 |
 | **WhatsMicFix** | D4vRAM369/WhatsMicFix-LSPosed (75 commits) | LSPosed 双 scope 架构（app+system） | 专为 WhatsApp，需改造 |
 | **XAudioCapture** | wzhy90/XAudioCapture | hook `PRIVATE_FLAG_ALLOW_AUDIO_PLAYBACK_CAPTURE` | 只解决"播放录音"非"麦克风录音" |
 | **tasker-mcp** | cj-elevate/tasker-mcp | Go 交叉编译 arm64、Tasker HTTP 协议 | 是 MCP server，方向不同 |
@@ -78,14 +78,18 @@
 | MiBrain 模块 | 借鉴自 | 借鉴点 | 是否直接 fork |
 |---|---|---|---|
 | APK 主体 | ToolNeuron (re-write 分支) | 项目骨架、Gradle 配置、SAF 文件选择 | 否，参考重写 |
-| LLM 推理 | ToolNeuron 的 llama.cpp 集成 | JNI 包装、流式生成 | 参考 |
+| LLM 推理 | llama.cpp 官方 llama-server 二进制 | OpenAI 兼容 HTTP API + SSE 流式 | 直接用二进制，APK 走 HTTP |
 | TTS | ToolNeuron 的 sherpa-onnx 集成 | 10 声音、5 语言、onnx 模型加载 | 参考 |
 | STT | ToolNeuron 的 sherpa-onnx ASR | 在线流式识别 + VAD | 参考 |
 | 唤醒词 | Hotword Plugin 思路 | 持续监听 + 模型可换 | 重写为 Kotlin |
-| LSPosed hook | WhatsMicFix 双 scope 架构 | app + system 同时 hook | 改造 |
-| LSPosed native hook | Phantom Mic 的 AudioRecord.cpp hook | native 层注入 | 二次开发 |
+| LSPosed 后台录音 | Phantom Mic (现成模块) | native 层 AudioRecord.cpp hook | 装现成，不自写（[D9](../DECISIONS.md)） |
 | KSU 模块壳 | 标准模板 | service.sh / post-fs-data.sh / sepolicy.rule | 直接用 |
-| Go 后端 | tasker-mcp 的 cross-compile | `GOOS=linux GOARCH=arm64` + CGO + NDK | 参考（如果选 Go） |
+
+> **废弃路径**（详见 [DECISIONS.md X1-X5](../DECISIONS.md)）：
+> - ~~Go daemon~~（CGO + NDK 交叉编译门槛高）
+> - ~~fork ToolNeuron LlamaEngine.kt~~（实际是 C++ + JNI，工程量并未省）
+> - ~~自写 LSPosed hook~~（Phantom Mic 已完整覆盖 native hook）
+> - ~~WhatsMicFix 改造~~（专为 WhatsApp，Phantom Mic 已够用）
 
 ---
 
@@ -106,10 +110,10 @@
 **原因**：
 - LiteRT-LM（HostAI 用的）只支持 .litertlm 格式，模型选择面窄
 - llama.cpp 支持 GGUF，社区模型海量（Qwen、Phi、Gemma 全有）
-- ToolNeuron 已验证 llama.cpp + JNI 在 Android 上稳定
-- GPU 加速：Adreno 730 支持 Vulkan，未来可启用 `-DLLAMA_VULKAN=ON`
+- llama.cpp 官方提供 android-arm64 预编译 `llama-server` 二进制，已验证可用（[01_feasibility_verification.md](./01_feasibility_verification.md) §2.1）
+- GPU 加速：Adreno 730 支持 Vulkan，未来可启用 `-DLLAMA_VULKAN=ON`；OpenCL + Adreno 后端也有预编译包
 
-**结果**：APK 内嵌 llama.cpp 预编译 .so（参考 ToolNeuron 的 jniLibs）
+**结果**：KSU 模块内放 `llama-server` 二进制（由 service.sh 启动），APK 通过 HTTP 调用，**不内嵌 .so 也不写 JNI**（详见 [D7](../DECISIONS.md) 与 [02_second_review.md](./02_second_review.md) 发现 1）
 
 ### 4.3 决策：sherpa-onnx 做 TTS + STT + 唤醒
 
@@ -126,10 +130,12 @@
 **原因**：
 - MIUI 后台录音限制在 Java 层 hook 不够，必须 native
 - Phantom Mic 已 hook `AudioRecord.cpp` native 层，覆盖 95% App
-- 7.6MB APK，活跃维护（2024-07 v2.0）
+- 7.6MB APK，来自 LSPosed 官方模块仓库
 - 我们不需要重写 hook，只要在 LSPosed 配置里启用即可
 
 **结果**：不自己写 LSPosed 模块，**装现成的 Phantom Mic**，只在文档里给配置指引
+
+> ⚠️ **风险升级（见 [D14](../DECISIONS.md)）**：原稿写"活跃维护（2024-07 v2.0）"，实际至 2026-06-30 已近 2 年未更新，上游可能停滞。进入 Phase 1 前先复查上游活跃度。
 
 ### 4.5 决策：不依赖 Tasker，APK 自带语音对话
 
@@ -166,7 +172,7 @@
 │  │  ┌────────────────────────────────────────────────────────┐  │   │
 │  │  │ 对话引擎 ConversationEngine                            │  │   │
 │  │  │  ├─ sherpa-onnx 流式 ASR (说话→文本)                   │  │   │
-│  │  │  ├─ llama.cpp JNI (本地 LLM 推理，流式输出)            │  │   │
+│  │  │  ├─ HTTP 客户端 → 调用本地 llama-server (流式 SSE)       │  │   │
 │  │  │  ├─ sherpa-onnx 流式 TTS (文本→语音，按句播放)         │  │   │
 │  │  │  └─ AudioTrack 播放队列                                 │  │   │
 │  │  └────────────────────────────────────────────────────────┘  │   │
@@ -180,28 +186,34 @@
 │                              ↑                                     │
 │  ┌─────────────────────────────────────────────────────────────┐   │
 │  │ KernelSU 模块 mi_brain_module                                │   │
-│  │  ├─ service.sh：开机自启 + watchdog                          │   │
-│  │  │   └─ am startservice MiBrainForegroundService              │   │
+│  │  ├─ service.sh：开机自启 llama-server + watchdog             │   │
+│  │  │   └─ nohup llama-server --host 127.0.0.1 --port 8080 &    │   │
 │  │  ├─ post-fs-data.sh：                                        │   │
 │  │  │   ├─ 创建 /data/adb/mibrain/ 目录                         │   │
 │  │  │   ├─ chcon SELinux 上下文                                 │   │
 │  │  │   └─ appops set <uid> RECORD_AUDIO allow                 │   │
-│  │  ├─ sepolicy.rule：放行 daemon 访问                          │   │
+│  │  ├─ sepolicy.rule：放行 llama-server 网络与文件访问           │   │
 │  │  ├─ system/etc/sysconfig/mibrain.xml：电池白名单             │   │
-│  │  └─ libs/：备用二进制（whisper.cpp / piper，可选）            │   │
+│  │  └─ libs/llama-server：llama.cpp android-arm64 预编译二进制   │   │
 │  └─────────────────────────────────────────────────────────────┘   │
 └────────────────────────────────────────────────────────────────────┘
                               ↑
-                              │ 用户手动放入 /data/adb/mibrain/models/
+                              │ 用户手动放入 /sdcard/MiBrain/models/
+                              │ （或 APK 内置下载器引导，见 §11 路线图 Phase 1）
                               │
 ┌────────────────────────────────────────────────────────────────────┐
-│ 模型资产（不打包进模块，体积大）                                     │
+│ 模型资产（不打包进模块与 APK，运行时下载到 app 私有目录）             │
 │  ├─ qwen2.5-3b-instruct-q4_k_m.gguf   (~2GB，对话)                 │
-│  ├─ sherpa-onnx-paraformer-zh (流式 ASR，~100MB)                  │
-│  ├─ sherpa-onnx-vits-zh (TTS，~80MB)                               │
+│  ├─ sherpa-onnx-paraformer-zh (流式 ASR，~250MB)                  │
+│  ├─ sherpa-onnx-vits-zh (TTS，~150MB)                              │
 │  └─ openwakeword.onnx (唤醒词，~10MB)                              │
 └────────────────────────────────────────────────────────────────────┘
 ```
+
+> **架构变更说明（见 [02_second_review.md](./02_second_review.md) 发现 1 + 发现 2）**：
+> - 推理后端从最初的 "APK 内嵌 llama.cpp JNI" 改为 "KSU 启动 llama-server 二进制 + APK 通过 HTTP 调用"，省掉 1500+ 行 JNI/C++ 工作量。
+> - 模型不再放 `/data/adb/mibrain/models/`，改为运行时下载到 app 私有目录，避免跨 SELinux 域访问。
+> - 详见 [DECISIONS.md D7](../DECISIONS.md)。
 
 ---
 
@@ -209,12 +221,12 @@
 
 | 组件 | 选型 | 版本 | 来源 |
 |---|---|---|---|
-| LLM 推理 | llama.cpp | b9844+ | github.com/ggml-org/llama.cpp |
-| Android JNI 集成 | llama.cpp android-arm64 包 | b9844 | 同上 release |
-| 流式 ASR | sherpa-onnx | 1.10+ | github.com/k2-fsa/sherpa-onnx |
-| 流式 TTS | sherpa-onnx VITS | 1.10+ | 同上 |
+| LLM 推理 | llama.cpp + llama-server 二进制 | b9844 | github.com/ggml-org/llama.cpp |
+| Android arm64 二进制 | llama-b9844-bin-android-arm64 | b9844 | 同上 release（KSU 模块内放，APK 不内嵌） |
+| 流式 ASR | sherpa-onnx (官方 Kotlin API) | v1.13.3 | github.com/k2-fsa/sherpa-onnx |
+| 流式 TTS | sherpa-onnx VITS | v1.13.3 | 同上 |
 | 唤醒词 | openWakeWord via sherpa-onnx | 0.6+ | github.com/dscripka/openWakeWord |
-| LSPosed hook | Phantom Mic | 2.0 | github.com/Mino260806/PhantomMic |
+| LSPosed hook | Phantom Mic | 2.0 | github.com/Xposed-Modules-Repo/tn.amin.phantom_mic |
 | UI 框架 | Jetpack Compose | BOM 2024.06+ | Google |
 | 异步 | Kotlin Coroutines | 1.8+ | JetBrains |
 | 持久化 | Room | 2.6+ | AndroidX |
@@ -277,13 +289,15 @@ mibrain/                                    # 仓库根
 ├── LICENSE                                # Apache 2.0
 ├── CONTRIBUTING.md                        # 贡献指南
 ├── docs/                                  # 文档（本设计文档在此）
-│   ├── 00_design_overview.md              # 本文档
-│   ├── 01_architecture.md                 # 详细架构
-│   ├── 02_build_guide.md                  # 编译指南
-│   ├── 03_deploy_guide.md                 # 部署指南（用户向）
-│   ├── 04_lspoded_setup.md                # LSPosed 配置指南
-│   ├── 05_troubleshooting.md              # 故障排查
-│   └── 06_performance_bench.md            # 性能基准
+│   ├── 00_design_overview.md              # 本文档（完整设计）
+│   ├── 01_feasibility_verification.md     # 可行性验证报告（10/10 依赖可达）
+│   ├── 02_second_review.md                # 第二轮严谨审视（5 个新发现 + 修订）
+│   ├── 03_architecture_detail.md          # 详细架构与时序图（进程拓扑、协议、状态机）
+│   ├── 04_build_guide.md                  # 编译指南 ⏳ Phase 1
+│   ├── 05_deploy_guide.md                 # 部署指南（用户向，含 8 步白名单）
+│   ├── 06_lspoded_setup.md                # LSPosed 配置指南（Phantom Mic 详解）
+│   ├── 07_troubleshooting.md              # 故障排查（7 大类故障 + 排查流程）
+│   └── 08_performance_bench.md            # 性能基准 ⏳ Phase 5
 │
 ├── app/                                   # MiBrain APK（Android Studio 项目）
 │   ├── app/
@@ -296,13 +310,13 @@ mibrain/                                    # 仓库根
 │   │   │   │   │   ├── BrainForegroundService.kt   # 前台服务
 │   │   │   │   │   └── AudioPipeline.kt            # 录音→VAD→唤醒→ASR
 │   │   │   │   ├── engine/
-│   │   │   │   │   ├── LlamaEngine.kt              # llama.cpp JNI 封装
+│   │   │   │   │   ├── LlamaHttpClient.kt          # 调用本地 llama-server (HTTP + SSE)
 │   │   │   │   │   ├── SherpaAsrEngine.kt         # 流式 ASR
 │   │   │   │   │   ├── SherpaTtsEngine.kt         # 流式 TTS
 │   │   │   │   │   ├── WakeWordEngine.kt          # 唤醒词
 │   │   │   │   │   └── ConversationEngine.kt      # 编排
 │   │   │   │   ├── data/
-│   │   │   │   │   ├── ModelManager.kt             # 模型管理
+│   │   │   │   │   ├── ModelManager.kt             # 模型管理（运行时下载到 app 私有目录）
 │   │   │   │   │   ├── SettingsRepository.kt
 │   │   │   │   │   └── db/                          # Room
 │   │   │   │   ├── ui/
@@ -312,8 +326,7 @@ mibrain/                                    # 仓库根
 │   │   │   │   └── util/
 │   │   │   ├── assets/
 │   │   │   │   └── default_prompts.json            # 默认 system prompt
-│   │   │   └── jniLibs/arm64-v8a/
-│   │   │       ├── libllama.so                     # llama.cpp 预编译
+│   │   │   └── jniLibs/arm64-v8a/                  # 仅 sherpa-onnx 的 .so（APK 不内嵌 libllama.so）
 │   │   │       ├── libsherpa-onnx-jni.so            # sherpa-onnx 预编译
 │   │   │       └── libonnxruntime.so
 │   │   └── proguard-rules.pro
@@ -323,26 +336,33 @@ mibrain/                                    # 仓库根
 ├── ksu_module/                            # KSU 模块源码
 │   ├── module.prop
 │   ├── install.sh
-│   ├── post-fs-data.sh
-│   ├── service.sh
+│   ├── post-fs-data.sh                   # 创建目录 + chcon SELinux + appops
+│   ├── service.sh                         # 启动 llama-server 二进制 + watchdog
 │   ├── uninstall.sh
 │   ├── sepolicy.rule
 │   ├── system/etc/sysconfig/mibrain.xml   # 电池白名单
+│   ├── libs/llama-server                  # llama.cpp android-arm64 预编译二进制
 │   └── build.sh                           # 打包 zip 脚本
 │
 ├── scripts/                               # 辅助脚本
-│   ├── download_models.sh                 # 一键下载模型
-│   ├── download_binaries.sh               # 一键下载预编译 so
-│   └── ci/build_apk.sh                    # CI 构建脚本
+│   ├── download_models.sh                 # 一键下载模型（HF + 阿里 OSS 镜像兜底）
+│   ├── download_binaries.sh               # 一键下载 llama-server 二进制 + sherpa-onnx AAR
+│   ├── verify_assets.sh                   # 校验所有下载文件的 SHA256
+│   ├── build_ksu_zip.sh                   # 打包 KSU 模块 zip
+│   └── ci/                                # CI 脚本 ⏳ Phase 5
+│       ├── build_apk.sh                   # CI 中构建 APK
+│       └── verify_design.sh              # CI 中验证设计文档完整性
 │
-├── .github/workflows/                     # GitHub Actions
-│   ├── build_apk.yml                      # 自动构建 APK
-│   ├── build_ksu_module.yml               # 自动打包 KSU 模块
-│   └── release.yml                        # 发布 release
+├── .github/                               # GitHub 配置
+│   ├── ISSUE_TEMPLATE/                    # Issue 模板（bug / feature / test_report）
+│   └── workflows/                         # GitHub Actions ⏳ Phase 5
+│       ├── build_apk.yml                  # 自动构建 APK
+│       ├── build_ksu_module.yml           # 自动打包 KSU 模块
+│       └── release.yml                    # 发布 release
 │
 └── third_party/                           # 第三方资源引用清单
     ├── NOTICES.md                         # 所有引用的开源项目
-    └── licenses/
+    └── licenses/                          # 完整许可文本 ⏳ Phase 1 补充
 ```
 
 ---
@@ -372,8 +392,8 @@ mibrain/                                    # 仓库根
 | MIUI 锁屏杀后台 | 高 | 高 | Phantom Mic hook + sysconfig 白名单 + 前台服务通知 |
 | sherpa-onnx native 库体积大 | 中 | 中 | 用 proguard 移除未用 ABI；只打包 arm64-v8a |
 | 唤醒词误触发 | 中 | 低 | 双段确认（唤醒后说"嗯？"再听命令） |
-| HyperOS 升级 hook 失效 | 低 | 高 | 文档提示版本对应；多 hook 点备选 |
-| llama.cpp 升级破坏 JNI | 中 | 中 | 锁版本到 b9844；CI 自动验证 |
+| **Phantom Mic 上游停滞 / HyperOS 2 不兼容** | **高** | **高** | 见 [DECISIONS.md D14](../DECISIONS.md)；备选 appops + 双触发兜底；Phase 1 前先复查上游活跃度 |
+| llama.cpp 升级破坏 llama-server API | 中 | 中 | 锁版本到 b9844；CI 自动验证 HTTP 协议 |
 | 麦克风被其他 App 占用 | 低 | 中 | 监听 AudioFocus 变化；占用时静默等待 |
 
 ---
@@ -387,11 +407,12 @@ mibrain/                                    # 仓库根
 
 ### Phase 1：MVP 单链路打通（最小可用）
 - [ ] Kotlin APK 骨架 + Compose UI（参考 ToolNeuron）
-- [ ] llama.cpp JNI 集成（先用预编译 .so）
+- [ ] KSU 模块壳：service.sh 启动 llama-server 二进制 + watchdog
+- [ ] APK 内 LlamaHttpClient.kt：调用本地 127.0.0.1:8080（非 JNI）
 - [ ] 一个静态对话界面（按按钮触发，非语音）
-- [ ] 模型加载 + 一次性生成
-- [ ] KSU 模块壳（service.sh + sysconfig 白名单）
-- **验收**：能通过 UI 跟模型对话（非语音）
+- [ ] 模型路径配置 + 一次性生成（非流式）
+- [ ] KSU 模块 sysconfig 电池白名单
+- **验收**：能通过 UI 跟模型对话（非语音），llama-server 开机自启
 
 ### Phase 2：语音链路
 - [ ] sherpa-onnx ASR 集成
@@ -436,33 +457,37 @@ mibrain/                                    # 仓库根
 
 ---
 
-## 13. 待用户确认的开放问题
+## 13. 开放问题（全部已确认）
 
-在进入 Phase 1 之前需要用户回答：
+> **更新（2026-06-30）**：原 6 个开放问题已全部在 [DECISIONS.md](../DECISIONS.md) 中确认，此处仅保留追溯。
 
-1. **GitHub 仓库归属**：你的 GitHub 用户名是什么？沙箱里 gh 未配置，需要你提供 token 或自己 push
-2. **项目名是否用 "MiBrain"**：还是有更好的命名？
-3. **是否接受借鉴 ToolNeuron 的代码结构**：参考其骨架（不直接抄代码），仅借鉴架构思路
-4. **唤醒词定什么**：默认"嘿小脑"，可改"小爱同学"会冲突，建议自定义
-5. **默认模型选哪个**：Qwen2.5-3B（推荐）还是 Gemma3-1B（更省内存）？
-6. **是否需要 RAG**：ToolNeuron 有，但增加复杂度。MVP 先不做？
+| # | 原问题 | 决策 | 决策编号 |
+|---|---|---|---|
+| 1 | GitHub 仓库归属 | `qbjsdsb/mibrain` | [D12](../DECISIONS.md) |
+| 2 | 项目名是否用 "MiBrain" | 是，确认 MiBrain | [D4](../DECISIONS.md) |
+| 3 | 是否借鉴 ToolNeuron 代码结构 | 仅参考骨架，不 fork 代码（fork LlamaEngine.kt 路径已被 [X2](../DECISIONS.md) 废弃） | [X2](../DECISIONS.md) |
+| 4 | 唤醒词定什么 | MVP 用英文 `hey_jarvis`，Phase 3 自训中文 | [D2](../DECISIONS.md) |
+| 5 | 默认模型选哪个 | Qwen2.5-3B-Instruct Q4_K_M（备选 1.5B） | [D1](../DECISIONS.md) |
+| 6 | 是否需要 RAG | MVP 不做，Phase 5 之后再说 | [D3](../DECISIONS.md) |
 
 ---
 
 ## 14. 当前阶段的明确边界
 
-✅ **本阶段已交付**：
-- 本设计文档
-- 完整架构图
-- 借鉴清单
-- 风险评估
-- 路线图
+✅ **本阶段已交付**（Phase 0 设计冻结）：
+- 完整设计文档 8 份（见 [docs/README.md](./README.md)）
+- 决策清单 [DECISIONS.md](../DECISIONS.md)（15 条决策 + 5 条已废弃）
+- 借鉴清单（本文 §3）+ 风险评估（本文 §10）+ 路线图（本文 §11）
+- Issue 模板 3 份（bug / feature / test_report）
+- 第三方许可声明 [third_party/NOTICES.md](../third_party/NOTICES.md)
+- 三个目录骨架（[app/](../app/) / [ksu_module/](../ksu_module/) / [scripts/](../scripts/)）的 README 占位
 
-❌ **本阶段未交付**（用户要求"先不要交付"）：
+❌ **本阶段未交付**（按用户要求"先不要交付"）：
 - 任何 .kt / .sh / .gradle 代码
-- 任何二进制
+- 任何二进制（llama-server、.so、模型）
 - 任何可执行物
 - KSU 模块 zip
 - APK
+- GitHub Actions workflows（Phase 5 才补）
 
-下一步等用户审阅设计、回答第 13 节开放问题、提供 GitHub 信息后再进入 Phase 1。
+下一步等用户确认进入 Phase 1 后开始编码。

@@ -60,8 +60,8 @@
 - **选择**: 装现成的 Phantom Mic v2.0，不自写 hook
 - **理由**: 已验证是 LSPosed 官方仓库，hook native 层
 - **日期**: 2026-06-30
-- **状态**: 已确认
-- **风险**: HyperOS 2 (Android 15) 兼容性未验证，Phase 4 真机测
+- **状态**: 已确认（带风险）
+- **风险**: Phantom Mic v2.0 发布于 2024-07，至 2026-06-30 已近 2 年未更新，HyperOS 2（Android 15）兼容性未验证。风险升级见 [D14](#-d14-phantom-mic-在-hyperos-2-上的兼容性)
 
 ### ✅ D10. APK 开发语言
 - **选择**: Kotlin + Jetpack Compose
@@ -88,9 +88,16 @@
 - **说明**: docs/05_deploy_guide.md 提到要校验 SHA256，但具体值需 Phase 1 release 时填
 - **状态**: 待 Phase 1
 
-### 🟡 D14. Phantom Mic 在 HyperOS 2 上的兼容性
-- **说明**: 真机未验证
-- **状态**: 待 Phase 4 真机测
+### 🔴 D14. Phantom Mic 在 HyperOS 2 上的兼容性
+- **说明**: 真机未验证；且 Phantom Mic v2.0 发布于 2024-07，**至本次设计冻结（2026-06-30）已近 2 年未更新**，可能已不维护
+- **风险等级**: 高
+  - 上游可能已停滞，HyperOS 2（Android 15）兼容性更不确定
+  - 原设计文档（[00_design_overview.md §10](./docs/00_design_overview.md)、[01_feasibility_verification.md §三 风险 1](./docs/01_feasibility_verification.md)）将此风险标为"中"，已严重低估
+- **进入 Phase 1 前的必做检查**:
+  1. 去上游仓库 https://github.com/Xposed-Modules-Repo/tn.amin.phantom_mic/releases 看是否有新版本
+  2. 看上游 Issues 区是否有 HyperOS 2 / Android 15 兼容性反馈
+  3. 若上游确认停滞，需要重新评估是否换备选方案（[06_lspoded_setup.md §6.1](./docs/06_lspoded_setup.md) 列了 XAudioCapture / WhatsMicFix 等候选）
+- **状态**: 待 Phase 1 启动前先做上游活跃度复查；真机验证留 Phase 4
 
 ### 🟡 D15. 中文唤醒词样本
 - **说明**: Phase 3 时需采集 100+ 句"嘿小脑"样本

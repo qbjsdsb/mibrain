@@ -103,6 +103,8 @@ KSU 模块**也不打包模型**，只放二进制和脚本。
 ### 风险等级
 🟡 中（可能能用，需要真机验证）
 
+> **2026-06-30 更新**：风险升级为 🔴 高。Phantom Mic v2.0 自 2024-07 发布至本次设计冻结已近 2 年未更新，上游活跃度存疑，HyperOS 2（Android 15）兼容性更不确定。详见 [DECISIONS.md D14](../DECISIONS.md) 与 [01_feasibility_verification.md §三 风险 1](./01_feasibility_verification.md)。
+
 ### 修订
 1. Phase 1-3 不依赖 Phantom Mic，先做"按按钮触发"的 APK
 2. Phase 4 真机验证 Phantom Mic 是否需要更新版本或备选模块
