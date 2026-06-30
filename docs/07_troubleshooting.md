@@ -100,7 +100,7 @@ cat /sys/class/thermal/thermal_zone*/temp 2>/dev/null | head -5
 ```
 
 补充说明：
-- 已默认 1.5B；若用 3B 质量优先模式 OOM 则切回 1.5B（[D1](../DECISIONS.md)）
+- 已默认 1.5B；**3B 在 8GB 设备必 OOM（[D30](../DECISIONS.md)），不可切 3B**，OOM 时确认是否被其他进程占用内存，或调短 `keep_alive_minutes`
 
 ---
 
@@ -248,14 +248,14 @@ dmesg | grep -i "lmkd\|lowmemorykiller"
 
 解决：
 - 关闭其他大内存 App（微信、抖音）
-- 默认已是 1.5B；若用户切到 3B 质量优先模式则换回 1.5B（[D1](../DECISIONS.md)）
+- 默认已是 1.5B；**3B 在 8GB 设备必 OOM（[D30](../DECISIONS.md)），不可切 3B**，确认是否被其他进程占用内存
 - 调短 `keep_alive_minutes`（5→3）
 
 > 默认 1.5B 模型串行峰值 ~7.5GB（[03_architecture_detail.md §6](./03_architecture_detail.md)），留 0.5GB headroom（最坏叠加 7.89GB，紧张）。
 
 ### 7.2 现象：设备严重发热
 
-8+ Gen 1 跑 1.5B 模型 + ASR + TTS 会发热，3B 模式发热更明显。
+8+ Gen 1 跑 1.5B 模型 + ASR + TTS 会发热。~~3B 模式发热更明显~~（**3B 在 8GB 必 OOM，[D30](../DECISIONS.md) 不可用**）。
 
 ```bash
 cat /sys/class/thermal/thermal_zone*/temp
@@ -264,7 +264,7 @@ cat /sys/class/thermal/thermal_zone*/temp
 如果 >75℃，先停用一段时间。可考虑：
 - 加散热背夹
 - 减少 threads=2
-- 已是默认；若切了 3B 则切回 1.5B
+- 已是默认 1.5B（**3B 不可用**，[D30](../DECISIONS.md)）
 
 ### 7.3 现象：HyperOS 升级后失效
 

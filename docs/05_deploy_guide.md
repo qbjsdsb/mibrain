@@ -374,6 +374,6 @@ KSU Manager → 模块 → 从存储安装新版 zip → 重启
 | 打开 APK 提示"LlamaEngine 加载失败" | JNI 加载失败 / 模型路径错 / .so 缺失 | 检查 DE 区模型完整性，看 `install.log` 与 logcat |
 | 说唤醒词没反应 | KWS 阈值太高 / 麦克风被拦 | 降阈值 / 装 Phantom Mic |
 | 锁屏后唤醒失败 | MIUI 杀进程 / Direct Boot 未生效 | 重新做 §5 全部 9 步；确认 APK 声明 `directBootAware=true`（[D21](../DECISIONS.md)） |
-| 回应很慢（>15s） | 模型太大 / 内存压力 | 已是默认 Qwen2.5-1.5B；切到 3B 反而更慢，先看内存 |
+| 回应很慢（>15s） | 模型太大 / 内存压力 | 已是默认 Qwen2.5-1.5B；**3B 在 8GB 设备必 OOM 不可切（[D30](../DECISIONS.md)）**，先看内存（关闭其他大内存 App），或调短 `keep_alive_minutes` |
 | TTS 声音不自然 | VITS 模型质量 | 升级到 matcha-icefall-zh-baker 等，**但许可需复核**（[D22](../DECISIONS.md)，默认配置已是 Apache 2.0 友好） |
 | 内存不足被杀 | 系统压力大 | 关闭其他大内存 App；切回 1.5B 默认 |

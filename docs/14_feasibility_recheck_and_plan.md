@@ -167,13 +167,20 @@
 - [x] 全项目旧内存数字（6.77GB/1.23GB/7.67GB/330MB）→ 第三轮重算后数字（7.5GB/0.5GB/7.89GB/0.11GB）
 - [x] 全项目 8 步 → 9 步白名单（6 个文件）
 - [x] 全项目旧决策计数（23 项/17 条）→ 31 项
-- [x] [README.md](../README.md) 修订说明 blockquote 补第四轮 F3-F7
-- [x] [00_design_overview.md](./00_design_overview.md) §6/§10 修订 b9830 + HyperOS 3 + 内存数字
-- [x] [01_feasibility_verification.md](./01_feasibility_verification.md) §三风险 1/2 + §七结论修订
-- [x] [03_architecture_detail.md](./03_architecture_detail.md) b9830 replace_all
+- [x] [README.md](../README.md) 修订说明 blockquote 补第四轮 F3-F7 + Root 框架表 LSPosed → LSPosed Vector + F4 来源
+- [x] [00_design_overview.md](./00_design_overview.md) §6/§10 修订 b9830 + HyperOS 3 + 内存数字 + §11 决策清单 3B 可选 → 不可用
+- [x] [01_feasibility_verification.md](./01_feasibility_verification.md) §三风险 1/2 + §七结论修订 + §八决策清单 3B 可选 → 不可用
+- [x] [03_architecture_detail.md](./03_architecture_detail.md) b9830 replace_all + §6 "3B 质量优先模式" → 已废弃
+- [x] [05_deploy_guide.md](./05_deploy_guide.md) §故障排查 3B 切换 → 不可切
+- [x] [06_lspoded_setup.md](./06_lspoded_setup.md) §1 LSPosed Vector Releases 链接 `LSPosed/LSPosed` → `JingMatrix/Vector` + §6.1 风险升级表述 + §6.1 降级方案补方案 D 放弃锁屏唤醒
+- [x] [07_troubleshooting.md](./07_troubleshooting.md) §7.1/7.2 3B 质量优先 → 不可用
+- [x] [09_phase6_network_tools_design.md](./09_phase6_network_tools_design.md) §2 3B 可选 → 不可用 + §11 Q4 3B 真机验证 → 不可引导用户切 3B
+- [x] [13_phase10_ux_enhancements_design.md](./13_phase10_ux_enhancements_design.md) §2.5/§11/§13 G2 儿童模式 3B 备选 → 不可用
 - [x] [app/README.md](../app/README.md) / [ksu_module/README.md](../ksu_module/README.md) / [scripts/README.md](../scripts/README.md) 旧 HTTP/llama-server/3B 路径修订（详见下文 §三 CI 方案）
-- [x] [.github/ISSUE_TEMPLATE/bug_report.md](../.github/ISSUE_TEMPLATE/bug_report.md) / [CONTRIBUTING.md](../CONTRIBUTING.md) / [docs/README.md](./README.md) / [02_second_review.md](./02_second_review.md) / [07_troubleshooting.md](./07_troubleshooting.md) / [13_phase10_ux_enhancements_design.md](./13_phase10_ux_enhancements_design.md) HyperOS 2 → 3 + 其他旧引用
-- [x] [third_party/NOTICES.md](../third_party/NOTICES.md) b9844 → b9830
+- [x] [.github/ISSUE_TEMPLATE/bug_report.md](../.github/ISSUE_TEMPLATE/bug_report.md) / [CONTRIBUTING.md](../CONTRIBUTING.md) / [docs/README.md](./README.md) / [02_second_review.md](./02_second_review.md) HyperOS 2 → 3 + 其他旧引用
+- [x] [third_party/NOTICES.md](../third_party/NOTICES.md) b9844 → b9830 + Phantom Mic 风险表述补"第四轮确认停滞 23 个月"
+- [x] [DECISIONS.md D1](../DECISIONS.md) 备选条件 3B "质量优先可选项" → "8GB 设备不可用，仅 12GB+ 或 Phase 11+ GPU 加速后可选"
+- [x] [DECISIONS.md D25](../DECISIONS.md) 代价项 3B "7.67GB 峰值" → "8.59GB 必 OOM 8GB 设备不可用"
 
 **准出条件**：所有文档无幻觉引用，所有依赖链接可达，所有许可声明准确（含训练数据 NON-COMMERCIAL 标注）。
 

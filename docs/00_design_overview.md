@@ -579,7 +579,7 @@ mibrain/                                    # 仓库根
 | 2 | 项目名是否用 "MiBrain" | 是，确认 MiBrain | [D4](../DECISIONS.md) | ✅ 已确认 |
 | 3 | 是否借鉴 ToolNeuron 代码结构 | 参考骨架 + `InferenceService.kt` + `InferenceClient.kt` JNI 范式（[X2 重新评估](../DECISIONS.md)，不再算废弃） | [X2](../DECISIONS.md) | ✅ 已确认 |
 | 4 | 唤醒词定什么 | MVP 用英文 `hey_jarvis`（sherpa-onnx KWS），Phase 3 自训中文 | [D2](../DECISIONS.md)、[D23](../DECISIONS.md) | ✅ 已确认 |
-| 5 | 默认模型选哪个 | **Qwen2.5-1.5B-Instruct Q4_K_M**（~1GB，3B 可选，[D1 修订](../DECISIONS.md)） | [D1](../DECISIONS.md) | ✅ 已确认 |
+| 5 | 默认模型选哪个 | **Qwen2.5-1.5B-Instruct Q4_K_M**（~1GB）；**3B 在 8GB 设备必 OOM 不可用**（[D30](../DECISIONS.md)），仅 12GB+ 或 Phase 11+ GPU 加速后可选 | [D1](../DECISIONS.md) + [D30](../DECISIONS.md) | ✅ 已确认 |
 | 6 | 是否需要 RAG | MVP 不做，Phase 5 之后再说 | [D3](../DECISIONS.md) | ✅ 已确认 |
 | 7 | 推理后端选什么 | **llama.android JNI**（[D7 修订](../DECISIONS.md)，切回 JNI，废弃 llama-server HTTP） | [D7](../DECISIONS.md)、[X7](../DECISIONS.md) | ✅ 已确认 |
 | 8 | 模型存储路径 | **DE 加密区 + Direct Boot**（[D21 新增](../DECISIONS.md)） | [D21](../DECISIONS.md) | ✅ 已确认 |

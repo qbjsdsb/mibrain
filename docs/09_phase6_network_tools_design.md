@@ -54,7 +54,7 @@ ConversationEngine
 ```
 
 **Stage 1 + Stage 2 混合方案**的取舍（[D17](../DECISIONS.md)）：
-- 默认 Qwen2.5-1.5B（[D1](../DECISIONS.md)）在结构化 function calling 上质量不稳，3B 可选但同样不保证，纯靠 LLM 决策会乱调工具
+- 默认 Qwen2.5-1.5B（[D1](../DECISIONS.md)）在结构化 function calling 上质量不稳（~~3B 可选但同样不保证~~ **3B 在 8GB 设备必 OOM 已不可用**，[D30](../DECISIONS.md)），纯靠 LLM 决策会乱调工具
 - 纯关键词扩展性差，每个新工具要改正则
 - 混合方案：高频场景（天气/翻译/新闻）走关键词快速路径，长尾场景走 LLM
 
@@ -240,5 +240,5 @@ Settings → 网络
 | Q1 | 和风天气 v7 API 是否仍在免费档？ | 默认假设仍可用，Phase 6 实施前复查 |
 | Q2 | LibreTranslate 公共实例是否仍稳定？ | 默认假设仍可用，Phase 6 实施前复查 |
 | Q3 | Bing China Search API 是否仍可用？ | 默认假设仍可用，否则换 SearXNG |
-| Q4 | 默认 Qwen2.5-1.5B（[D1](../DECISIONS.md)）的 function calling 是否够稳？3B 可选模式是否需在 Phase 6 真机验证不 OOM？ | Phase 6 真机测试 1.5B function calling 准确率，不达标则引导用户切 3B |
+| Q4 | 默认 Qwen2.5-1.5B（[D1](../DECISIONS.md)）的 function calling 是否够稳？~~3B 可选模式是否需在 Phase 6 真机验证不 OOM？~~ **第三轮重算后 3B 在 8GB 设备必 OOM（[D30](../DECISIONS.md)），Phase 6 不可引导用户切 3B**；1.5B function calling 不达标只能靠 [D17](../DECISIONS.md) 关键词正则优先 + 32-token CoT（[D25](../DECISIONS.md)）兜底，或 Phase 11+ 启用 Adreno GPU 加速后再评估 3B | Phase 6 真机测试 1.5B + 32-token CoT 的 function calling 准确率，不达标则强化关键词路由覆盖更多场景 |
 | Q5 | 是否新增 0.5B 小模型做意图分类器？ | 暂不，混合方案够用 |

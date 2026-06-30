@@ -71,7 +71,7 @@ Phase 6-9 扩展功能设计稿：
 | 唤醒词 | sherpa-onnx KWS zipformer-wenetspeech（Apache 2.0） | https://github.com/k2-fsa/sherpa-onnx/releases |
 | 模型存储 | DE 加密区 + Direct Boot（`/data/user_de/0/com.mibrain/files/models/`） | [D21](./DECISIONS.md) |
 | LSPosed 后台录音 hook | Phantom Mic 2.0 | https://github.com/Xposed-Modules-Repo/tn.amin.phantom_mic |
-| Root 框架 | KernelSU + ZygiskNext + LSPosed | https://kernelsu.org |
+| Root 框架 | KernelSU + ZygiskNext + LSPosed Vector（[D9](./DECISIONS.md)，第四轮 [F4](./docs/14_feasibility_recheck_and_plan.md) 订正来源 `JingMatrix/Vector`） | https://kernelsu.org |
 | APK 开发语言 | Kotlin + Jetpack Compose | - |
 | JNI wrapper | C++ + JNI（参考 ToolNeuron `InferenceService.kt` + `InferenceClient.kt`） | 见 `app/src/main/jni/` |
 
@@ -110,7 +110,7 @@ Phase 6-9 扩展功能设计稿：
 
 | 决策 | 选择 | 详见 |
 |---|---|---|
-| 默认模型 | Qwen2.5-1.5B Q4_K_M（默认）/ 3B 质量优先可选 | [D1](./DECISIONS.md) |
+| 默认模型 | Qwen2.5-1.5B Q4_K_M（默认）；**3B 在 8GB 设备必 OOM 不可用**（[D30](./DECISIONS.md)），仅 12GB+ 设备或 Phase 11+ Adreno GPU 加速后可选 | [D1](./DECISIONS.md) + [D30](./DECISIONS.md) |
 | 唤醒词（MVP） | 英文 hey_jarvis | [D2](./DECISIONS.md) |
 | 是否做 RAG | MVP 不做 | [D3](./DECISIONS.md) |
 | 项目名 | MiBrain | [D4](./DECISIONS.md) |

@@ -234,7 +234,7 @@ matcha-icefall-zh-baker + vocos-22khz-univ.onnx
 
 1. **GitHub 仓库归属** → 已确认 `qbjsdsb/mibrain`（[D12](../DECISIONS.md)）
 2. ~~**是否同意 fork ToolNeuron 的推理封装**~~ → 已废弃（[X2 修正](../DECISIONS.md)）：ToolNeuron 重新评估为 Kotlin+Compose 全栈，真实推理封装为 `InferenceService.kt` + `InferenceClient.kt`（位于 `service/inference/` 目录），可作为参考样板（不算"fork 整个 ToolNeuron"）
-3. **默认模型** → 已确认 Qwen2.5-1.5B Q4_K_M（默认，3B 可选）（[D1 修订](../DECISIONS.md)）
+3. **默认模型** → 已确认 Qwen2.5-1.5B Q4_K_M（默认）；**3B 在 8GB 设备必 OOM 不可用**（[D30](../DECISIONS.md)，第三轮重算后）
 4. **项目名 "MiBrain" 是否最终确认** → 已确认（[D4](../DECISIONS.md)）
 
 二轮深度检查后新增已确认：

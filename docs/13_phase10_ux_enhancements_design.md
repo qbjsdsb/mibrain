@@ -169,7 +169,7 @@ class ChildTimeLimiter(private val profileId: String, private val repo: ProfileR
 
 | 风险 | 影响 | 缓解 |
 |---|---|---|
-| 1.5B 模型遵守儿童系统 prompt 能力弱 | 高 | 双层过滤兜底；不可靠时考虑儿童模式单独用 3B 模型（[D1](../DECISIONS.md) 备选） |
+| 1.5B 模型遵守儿童系统 prompt 能力弱 | 高 | 双层过滤兜底；~~不可靠时考虑儿童模式单独用 3B 模型~~（[D30](../DECISIONS.md) 已确认 3B 在 8GB 设备必 OOM，**8GB 设备不可切 3B**）；不可靠时改为强化系统 prompt + 关键词黑名单兜底，或 Phase 11+ 启用 Adreno GPU 加速后再评估 3B |
 | 关键词黑名单误判 | 中 | 兜底文本温和，避免"拒绝感"；家长可在 Room 表查看过滤记录 |
 | 时长限制绕过（改系统时间） | 低 | 不做防绕过，家长信任优先 |
 | 儿童误切换 profile | 中 | 切换 profile 需 PIN（4 位数字，家长设置） |
@@ -495,7 +495,7 @@ data class Setting(
 | G 项 | 主要风险 | 等级 | 缓解 |
 |---|---|---|---|
 | G1 | profile 切换中崩溃导致状态不一致 | 中 | PROFILE_SWITCHING 加超时 + 失败回滚 |
-| G2 | 1.5B 模型遵守儿童系统 prompt 能力弱 | 高 | 双层过滤兜底；可选 3B |
+| G2 | 1.5B 模型遵守儿童系统 prompt 能力弱 | 高 | 双层过滤兜底；**3B 在 8GB 设备不可用（[D30](../DECISIONS.md)），不可切 3B**，只能强化 prompt + 黑名单 |
 | G5 | 多语言模型存储压力 | 中 | 按需下载 |
 | G6 | Compose a11y 工程量大 | 中 | Phase 10 专项迭代 |
 | G9 | Phantom Mic 在蓝牙下行为未知 | 高 | Phase 4 真机验证 + fallback |
@@ -523,7 +523,7 @@ data class Setting(
 | 问题 | 待讨论时机 |
 |---|---|
 | G1 profile 最大数：3 还是 5？ | Phase 10 启动时 |
-| G2 儿童模式是否单独用 3B 模型（牺牲内存换过滤遵守度）？ | Phase 4 真机验证 1.5B 过滤效果后 |
+| G2 儿童模式是否单独用 3B 模型（牺牲内存换过滤遵守度）？ | **已答：3B 在 8GB 设备必 OOM（[D30](../DECISIONS.md)），不可切 3B**；改为强化 prompt + 关键词黑名单兜底 |
 | G2 关键词黑名单由谁维护？硬编码 vs 设置页可编辑 | Phase 10 启动时 |
 | G5 i18n 是否要支持日韩等语言？还是仅中英双语 | Phase 10 启动时（建议仅中英） |
 | G6 a11y 是否要支持盲文输出？ | 暂不做，未来考虑 |
@@ -556,7 +556,7 @@ data class Setting(
 | 决策 | 候选 | 待确认 |
 |---|---|---|
 | profile 最大数 | 3 / 5 | Phase 10 启动 |
-| 儿童模式 LLM 模型 | 1.5B 默认 / 3B 单独 | Phase 4 验证后 |
+| 儿童模式 LLM 模型 | **仅 1.5B（3B 在 8GB 必 OOM，[D30](../DECISIONS.md)）** | 已确认 |
 | i18n MVP 语言范围 | 仅中英 / 中英日韩 | Phase 10 启动 |
 | G17 双击电源键 | LSPosed 注入 / 仅 Widget | Phase 10 启动 |
 | 关键词黑名单维护方式 | 硬编码 / 设置页可编辑 | Phase 10 启动 |
