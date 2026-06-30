@@ -23,7 +23,7 @@
 | 核心目标 | 离线、本地、隐私不出手机的语音助手 |
 | 开发语言 | Kotlin（APK + JNI wrapper）+ Shell（KSU 脚本） |
 | 当前阶段 | Phase 0：设计冻结（不交付代码，见 [README.md](../README.md)） |
-| 推理后端 | llama.cpp b9844 + 官方 [llama.android](https://github.com/ggml-org/llama.cpp/tree/master/llama.android) JNI 模块（[D7](../DECISIONS.md)） |
+| 推理后端 | llama.cpp b9844 + 官方 [llama.android](https://github.com/ggml-org/llama.cpp/tree/master/examples/llama.android) JNI 模块（[D7](../DECISIONS.md)） |
 | 模型存储 | `/data/user_de/0/com.mibrain/files/models/`（DE 加密区 + Direct Boot，[D21](../DECISIONS.md)） |
 
 ---
@@ -61,7 +61,7 @@
 
 | 项目 | 仓库 | 借鉴价值 | 不直接用的原因 |
 |---|---|---|---|
-| **ToolNeuron** | [Siddhesh2377/ToolNeuron](https://github.com/Siddhesh2377/ToolNeuron) (258★, 927 commits, Kotlin+Compose 全栈) | 完整 Kotlin 架构、GGUF 加载、TTS/STT/RAG 全套、LlamaEngine.kt JNI 调用范式 | 太重，927 commits 学习成本高；未针对 MIUI 优化；无 LSPosed hook；但作为**代码参考样板**强烈推荐（[X2 重新评估](../DECISIONS.md)） |
+| **ToolNeuron** | [Siddhesh2377/ToolNeuron](https://github.com/Siddhesh2377/ToolNeuron) (429★, 927 commits, Kotlin+Compose 全栈) | 完整 Kotlin 架构、GGUF 加载、TTS/STT/RAG 全套、`InferenceService.kt` + `InferenceClient.kt`（位于 `service/inference/` 目录）JNI 调用范式 | 太重，927 commits 学习成本高；未针对 MIUI 优化；无 LSPosed hook；但作为**代码参考样板**强烈推荐（[X2 重新评估](../DECISIONS.md)） |
 | **HostAI** | wannaphong/android-hostai (v1.0.4, alpha) | LiteRT-LM + GPU 加速 + OpenAI API | 只解决"模型服务"一层，无语音、无 hook |
 | **Phantom Mic** | [Xposed-Modules-Repo/tn.amin.phantom_mic](https://github.com/Xposed-Modules-Repo/tn.amin.phantom_mic) (LSPosed 官方模块仓库) | native hook AudioRecord.cpp，成熟 | 只 hook 不提供调度，用户自行安装 |
 | **WhatsMicFix** | D4vRAM369/WhatsMicFix-LSPosed (75 commits) | LSPosed 双 scope 架构（app+system） | 专为 WhatsApp，需改造 |
@@ -70,7 +70,7 @@
 | **Hotword Plugin + Snowboy** | jolanrensen | Tasker 唤醒词插件 + 自训 .umdl 模型 | Snowboy 已半弃维 |
 | **wyoming-satellite-termux** | pantherale0 | Termux 跑本地唤醒 | 依赖 Termux（用户已排除） |
 | **sherpa-onnx 官方示例** | [k2-fsa/sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) (v1.13.3) | ASR/TTS/VAD/KWS 全栈 + Android Kotlin demo | 仅作为依赖，不作参考样板 |
-| **llama.android** | [ggml-org/llama.cpp/tree/master/llama.android](https://github.com/ggml-org/llama.cpp/tree/master/llama.android) | 官方 JNI 模块（llama.cpp 主仓库内） | 直接作为依赖 |
+| **llama.android** | [ggml-org/llama.cpp/tree/master/examples/llama.android](https://github.com/ggml-org/llama.cpp/tree/master/examples/llama.android) | 官方 JNI 模块（llama.cpp 主仓库内） | 直接作为依赖 |
 
 ### 2.2 我们的差异化
 
@@ -90,7 +90,7 @@
 | MiBrain 模块 | 借鉴自 | 借鉴点 | 是否直接 fork |
 |---|---|---|---|
 | APK 主体 | ToolNeuron (re-write 分支) | 项目骨架、Gradle 配置、SAF 文件选择 | 否，参考重写 |
-| LLM 推理 | [llama.android 官方 JNI 模块](https://github.com/ggml-org/llama.cpp/tree/master/llama.android) + [ToolNeuron LlamaEngine.kt](https://github.com/Siddhesh2377/ToolNeuron) | JNI wrapper 范式、模型加载/卸载、流式 callback | 参考样板（[D7](../DECISIONS.md)、[X2](../DECISIONS.md)） |
+| LLM 推理 | [llama.android 官方 JNI 模块](https://github.com/ggml-org/llama.cpp/tree/master/examples/llama.android) + [ToolNeuron `InferenceService.kt` + `InferenceClient.kt`](https://github.com/Siddhesh2377/ToolNeuron)（位于 `service/inference/` 目录） | JNI wrapper 范式、模型加载/卸载、流式 callback | 参考样板（[D7](../DECISIONS.md)、[X2](../DECISIONS.md)） |
 | TTS / STT / VAD / KWS | [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) v1.13.3 官方 Kotlin API | 一个 AAR 同时覆盖四能力，含 Android Kotlin demo | 直接依赖（[D8](../DECISIONS.md)、[D23](../DECISIONS.md)） |
 | LSPosed 后台录音 | [Phantom Mic](https://github.com/Xposed-Modules-Repo/tn.amin.phantom_mic) (LSPosed 官方模块仓库) | native 层 AudioRecord.cpp hook | 装现成，不自写（[D9](../DECISIONS.md)） |
 | KSU 模块壳 | 标准 KSU 模板 | post-fs-data.sh / sepolicy.rule / appops | 直接用 |
@@ -102,7 +102,7 @@
 > - ~~WhatsMicFix 改造~~（专为 WhatsApp，Phantom Mic 已够用）
 > - ~~openWakeWord 自写 Kotlin wrapper~~（[D23](../DECISIONS.md)，sherpa-onnx 已内置 KWS，统一技术栈）
 >
-> **澄清**：~~fork ToolNeuron LlamaEngine.kt~~（[X2 原误判已修正](../DECISIONS.md)，实际 ToolNeuron 是 Kotlin+Compose 全栈，LlamaEngine.kt 可作为参考样板，不再算"废弃"）
+> **澄清**：~~fork ToolNeuron 推理封装~~（[X2 原误判已修正](../DECISIONS.md)，实际 ToolNeuron 是 Kotlin+Compose 全栈，真实推理封装为 `InferenceService.kt` + `InferenceClient.kt`（位于 `service/inference/` 目录），可作为参考样板，不再算"废弃"）
 
 ---
 
@@ -123,10 +123,10 @@
 **原因**：
 - LiteRT-LM（HostAI 用的）只支持 .litertlm 格式，模型选择面窄
 - llama.cpp 支持 GGUF，社区模型海量（Qwen、Phi、Gemma 全有）
-- llama.cpp 官方提供 [llama.android](https://github.com/ggml-org/llama.cpp/tree/master/llama.android) JNI 模块，已在 PocketPal/ToolNeuron 等多个 Android LLM 项目中验证可用
-- GPU 加速：Adreno 730 支持 Vulkan，未来可启用 `-DLLAMA_VULKAN=ON`；OpenCL + Adreno 后端也有预编译包
+- llama.cpp 官方提供 [llama.android](https://github.com/ggml-org/llama.cpp/tree/master/examples/llama.android) JNI 模块，已在 PocketPal/ToolNeuron 等多个 Android LLM 项目中验证可用
+- GPU 加速：Adreno 730 支持 Vulkan，未来可启用 `-DLLAMA_VULKAN=ON`；OpenCL + Adreno 后端**无 Android 预编译包**（仅 Windows arm64 版 `llama-b9844-bin-win-opencl-adreno-arm64.zip`），Android 需用 Snapdragon 工具链 Docker 镜像自编译（`GGML_OPENCL=ON` + `GGML_HEXAGON=ON`），Phase 0-5 不做 GPU 加速
 
-**结果**：APK 内通过 JNI 调用 libllama.so，参考 [llama.android 官方模块](https://github.com/ggml-org/llama.cpp/tree/master/llama.android) + ToolNeuron LlamaEngine.kt（[D7](../DECISIONS.md)、[X2](../DECISIONS.md)）。**不再走 llama-server HTTP 路径**（[X7 废弃](../DECISIONS.md)）
+**结果**：APK 内通过 JNI 调用 libllama.so，参考 [llama.android 官方模块](https://github.com/ggml-org/llama.cpp/tree/master/examples/llama.android) + ToolNeuron `InferenceService.kt` + `InferenceClient.kt`（位于 `service/inference/` 目录）（[D7](../DECISIONS.md)、[X2](../DECISIONS.md)）。**不再走 llama-server HTTP 路径**（[X7 废弃](../DECISIONS.md)）
 
 ### 4.3 决策：sherpa-onnx 做 TTS + STT + VAD + KWS（2026-06-30 修订：全栈统一）
 
@@ -224,7 +224,7 @@
 │  ├─ qwen2.5-1.5b-instruct-q4_k_m.gguf   (~1GB，默认，[D1](../DECISIONS.md))│
 │  ├─ qwen2.5-3b-instruct-q4_k_m.gguf     (~2GB，质量优先可选)       │
 │  ├─ sherpa-onnx-streaming-zipformer-bilingual-zh-en (流式 ASR，Apache 2.0)│
-│  ├─ sherpa-onnx-vits-zh-ll (TTS，~150MB，Apache 2.0，[D22](../DECISIONS.md))│
+│  ├─ sherpa-onnx-vits-zh-ll (TTS，~150MB，社区贡献许可未明确，[D22](../DECISIONS.md))│
 │  ├─ silero_vad.onnx (VAD，~10MB，sherpa-onnx 自带)                 │
 │  └─ hey_jarvis.onnx (KWS，~10MB，[D23](../DECISIONS.md))           │
 └────────────────────────────────────────────────────────────────────┘
@@ -242,12 +242,12 @@
 
 | 组件 | 选型 | 版本 | 来源 |
 |---|---|---|---|
-| LLM 推理 | llama.cpp + 官方 [llama.android](https://github.com/ggml-org/llama.cpp/tree/master/llama.android) JNI 模块 | b9844 | github.com/ggml-org/llama.cpp |
-| LLM JNI wrapper | LlamaEngine.kt（参考 ToolNeuron 实现，[X2](../DECISIONS.md)） | - | 自写 ~1500 行 Kotlin + C，参考样板 |
+| LLM 推理 | llama.cpp + 官方 [llama.android](https://github.com/ggml-org/llama.cpp/tree/master/examples/llama.android) JNI 模块 | b9844 | github.com/ggml-org/llama.cpp |
+| LLM JNI wrapper | LlamaEngine.kt（项目自命名；实现参考 ToolNeuron `InferenceService.kt` + `InferenceClient.kt`，[X2](../DECISIONS.md)） | - | 自写 ~1500 行 Kotlin + C，参考样板 |
 | 流式 ASR | sherpa-onnx (官方 Kotlin API) | v1.13.3 | github.com/k2-fsa/sherpa-onnx |
 | 流式 TTS | sherpa-onnx VITS | v1.13.3 | 同上 |
 | VAD | sherpa-onnx silero_vad | v1.13.3 | 同上（一个 AAR 覆盖） |
-| 唤醒词 KWS | sherpa-onnx keyword spotting（zh-vgg） | v1.13.3 | 同上（[D23](../DECISIONS.md)，弃用 openWakeWord） |
+| 唤醒词 KWS | sherpa-onnx kws-zipformer-wenetspeech-3.3M-2024-01-01 | v1.13.3 | 同上（[D23](../DECISIONS.md)，弃用 openWakeWord；原引用 `zh-vgg` 不存在，真实模型为 zipformer 架构） |
 | LSPosed hook | [Phantom Mic](https://github.com/Xposed-Modules-Repo/tn.amin.phantom_mic) | 2.0 | LSPosed 官方模块仓库 |
 | UI 框架 | Jetpack Compose | BOM 2024.06+ | Google |
 | 异步 | Kotlin Coroutines | 1.8+ | JetBrains |
@@ -354,7 +354,7 @@ mibrain/                                    # 仓库根
 │   │   │   │   │   ├── MiBrainForegroundService.kt   # 前台服务（directBootAware）
 │   │   │   │   │   └── AudioPipeline.kt            # 录音→VAD→KWS→ASR
 │   │   │   │   ├── engine/
-│   │   │   │   │   ├── LlamaEngine.kt              # JNI 调用 libllama.so（参考 ToolNeuron）
+│   │   │   │   │   ├── LlamaEngine.kt              # JNI 调用 libllama.so（项目自命名，参考 ToolNeuron `InferenceService.kt` + `InferenceClient.kt`）
 │   │   │   │   │   ├── SherpaAsrEngine.kt          # 流式 ASR
 │   │   │   │   │   ├── SherpaTtsEngine.kt          # 流式 TTS
 │   │   │   │   │   ├── SherpaVadEngine.kt          # VAD（silero_vad）
@@ -458,8 +458,11 @@ mibrain/                                    # 仓库根
 | **Phantom Mic 上游停滞 / HyperOS 2 不兼容** | **高** | **高** | 见 [DECISIONS.md D14](../DECISIONS.md)；v2.0 至 2026-06-30 已近 2 年未更新；Phase 1 前先复查 [上游活跃度](https://github.com/Xposed-Modules-Repo/tn.amin.phantom_mic/releases)；备选 appops + 双触发兜底 |
 | llama.cpp 升级破坏 JNI ABI | 中 | 中 | 锁版本到 b9844（[D7](../DECISIONS.md)）；CI 自动验证 JNI 接口签名；`LlamaEngine.getVersion()` 启动时校验（[03 §3.3](./03_architecture_detail.md)） |
 | 麦克风被其他 App 占用 | 低 | 中 | 监听 AudioFocus 变化；占用时静默等待 |
-| JNI wrapper 工程量 ~1500 行被低估 | 中 | 中 | 参考 [ToolNeuron LlamaEngine.kt](https://github.com/Siddhesh2377/ToolNeuron)（[X2](../DECISIONS.md)）；Phase 1 优先打通最小路径，复杂特性（function calling）后置 |
+| JNI wrapper 工程量 ~1500 行被低估 | 中 | 中 | 参考 [ToolNeuron `InferenceService.kt` + `InferenceClient.kt`](https://github.com/Siddhesh2377/ToolNeuron)（位于 `service/inference/` 目录）（[X2](../DECISIONS.md)）；Phase 1 优先打通最小路径，复杂特性（function calling）后置 |
 | 模型下载到 DE 区失败 / SHA256 不匹配 | 低 | 中 | APK 内置下载器带断点续传 + SHA256 校验 + 多源切换（HF 主 → 阿里 OSS 镜像兜底）；失败删除重试 |
+| **TTS 无流式 chunk 回调** | **中** | **中** | sherpa-onnx TTS 是 OfflineTts（一次性生成完整 PCM 数组），无官方流式回调；MVP 用 "先合成完整 PCM 再播" 模式（[D26](../DECISIONS.md)）；Phase 2 / Phase 9 G6 字幕同步需在 Kotlin 端按 200ms 切 PCM 数组成 chunk 喂 AudioTrack 对齐播放进度 |
+| **Qwen2.5-1.5B function calling 不稳** | **高** | **中** | BFCL v3 实测直答准确率仅 44%，32-token CoT 提升到 64%，长 CoT 反崩到 25%；Phase 6 工具调用必须用 32-token CoT prompt 或换 3B 模型（[D25](../DECISIONS.md)）；[D17](../DECISIONS.md) 混合方案关键词正则优先兜底 |
+| **Direct Boot + sherpa-onnx 加载未公开验证** | **中** | **高** | sherpa-onnx 能否在 Direct Boot 下加载 .so + ONNX 模型无先例（BCR 仅验证 Direct Boot + AudioRecord）；Stage 1 PoC-A 设为硬关卡，4 子项（.so 加载 / ONNX 模型加载 / ORT 无 SharedPreferences 副作用 / HyperOS 2 不杀 FGS）任一失败则放弃 Direct Boot 退到"用户首次解锁后才启动"（[D27](../DECISIONS.md)） |
 
 ---
 
@@ -474,8 +477,8 @@ mibrain/                                    # 仓库根
 
 ### Phase 1：MVP 单链路打通（最小可用）
 - [ ] Kotlin APK 骨架 + Compose UI（参考 [ToolNeuron](https://github.com/Siddhesh2377/ToolNeuron)）
-- [ ] **JNI 集成**：编译 llama.cpp b9844 → libllama.so + libggml.so（参考 [llama.android 官方模块](https://github.com/ggml-org/llama.cpp/tree/master/llama.android)）
-- [ ] **LlamaEngine.kt**：JNI wrapper（参考 ToolNeuron，~1500 行 Kotlin + C）
+- [ ] **JNI 集成**：编译 llama.cpp b9844 → libllama.so + libggml.so（参考 [llama.android 官方模块](https://github.com/ggml-org/llama.cpp/tree/master/examples/llama.android)）
+- [ ] **LlamaEngine.kt**：JNI wrapper（项目自命名，参考 ToolNeuron `InferenceService.kt` + `InferenceClient.kt`，~1500 行 Kotlin + C）
 - [ ] AndroidManifest.xml：`directBootAware=true` + ForegroundService(microphone)
 - [ ] 一个静态对话界面（按按钮触发，非语音）
 - [ ] ModelManager：DE 区模型下载 + SHA256 校验
@@ -574,7 +577,7 @@ mibrain/                                    # 仓库根
 |---|---|---|---|---|
 | 1 | GitHub 仓库归属 | `qbjsdsb/mibrain` | [D12](../DECISIONS.md) | ✅ 已确认 |
 | 2 | 项目名是否用 "MiBrain" | 是，确认 MiBrain | [D4](../DECISIONS.md) | ✅ 已确认 |
-| 3 | 是否借鉴 ToolNeuron 代码结构 | 参考骨架 + LlamaEngine.kt JNI 范式（[X2 重新评估](../DECISIONS.md)，不再算废弃） | [X2](../DECISIONS.md) | ✅ 已确认 |
+| 3 | 是否借鉴 ToolNeuron 代码结构 | 参考骨架 + `InferenceService.kt` + `InferenceClient.kt` JNI 范式（[X2 重新评估](../DECISIONS.md)，不再算废弃） | [X2](../DECISIONS.md) | ✅ 已确认 |
 | 4 | 唤醒词定什么 | MVP 用英文 `hey_jarvis`（sherpa-onnx KWS），Phase 3 自训中文 | [D2](../DECISIONS.md)、[D23](../DECISIONS.md) | ✅ 已确认 |
 | 5 | 默认模型选哪个 | **Qwen2.5-1.5B-Instruct Q4_K_M**（~1GB，3B 可选，[D1 修订](../DECISIONS.md)） | [D1](../DECISIONS.md) | ✅ 已确认 |
 | 6 | 是否需要 RAG | MVP 不做，Phase 5 之后再说 | [D3](../DECISIONS.md) | ✅ 已确认 |

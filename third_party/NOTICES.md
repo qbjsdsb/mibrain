@@ -23,7 +23,7 @@
 - 许可文本：https://github.com/ggml-org/llama.cpp/raw/master/LICENSE
 
 ### llama.android（官方 JNI 模块）
-- 仓库：https://github.com/ggml-org/llama.cpp/tree/master/llama.android
+- 仓库：https://github.com/ggml-org/llama.cpp/tree/master/examples/llama.android
 - 许可：MIT License（随 llama.cpp 主仓库）
 - 用途：llama.cpp 官方 Android JNI 集成模块，作为本项目 JNI wrapper 的实现基线（[D7](../DECISIONS.md)）
 - 许可文本：https://github.com/ggml-org/llama.cpp/raw/master/LICENSE
@@ -66,18 +66,20 @@
 
 ### sherpa-onnx vits-zh-ll（中文 TTS）
 - 仓库：https://huggingface.co/k2-fsa/sherpa-onnx
-- 许可：Apache License 2.0
+- 许可：社区贡献，许可未明确声明（HF 卡 metadata 缺失）。模型卡仅注明"This model is contributed by the community and trained using https://github.com/Plachtaa/VITS-fast-fine-tuning"，**官方未声明许可**，训练数据来源不明，**不可声称 Apache 2.0**
 - 用途：中文 TTS（[D22](../DECISIONS.md)，替代原 aishell3）
+- 风险与替代：分发 APK + 此模型可能存在许可风险；推荐升级到 `matcha-icefall-zh-baker`（Apache 2.0 已验证）；Phase 5 发布前必须切换或确认 vits-zh-ll 许可（详见 [D22](../DECISIONS.md)）
 
 ### silero_vad（VAD）
 - 仓库：https://github.com/k2-fsa/sherpa-onnx/releases
 - 许可：Apache License 2.0（sherpa-onnx release 自带）
 - 用途：语音活动检测
 
-### sherpa-onnx keyword-spotting-zh-vgg（唤醒词 KWS）
+### sherpa-onnx kws-zipformer-wenetspeech-3.3M-2024-01-01（唤醒词 KWS）
 - 仓库：https://github.com/k2-fsa/sherpa-onnx/releases (kws-models)
 - 许可：Apache License 2.0
 - 用途：唤醒词检测（[D23](../DECISIONS.md)）
+- 说明：原引用 `zh-vgg` 不存在，真实模型为 zipformer 架构（sherpa-onnx 官方 KWS 预训练清单全部为 Zipformer 架构）
 
 ### ~~sherpa-onnx-streaming-paraformer-bilingual-zh-en~~（已弃用）
 - 原许可：CC BY-NC 4.0
@@ -126,7 +128,7 @@
 ### ToolNeuron
 - 仓库：https://github.com/Siddhesh2377/ToolNeuron
 - 许可：MIT License
-- 用途：参考 Kotlin + Compose + llama.cpp + sherpa-onnx 全栈同构项目的工程实践，特别是 LlamaEngine.kt JNI 调用范式、AES-256-GCM 模型加密存储、RAG 集成（[X2 重新评估](../DECISIONS.md)）
+- 用途：参考 Kotlin + Compose + llama.cpp + sherpa-onnx 全栈同构项目的工程实践，特别是 `InferenceService.kt` + `InferenceClient.kt`（位于 `service/inference/` 目录）JNI 调用范式、AES-256-GCM 模型加密存储、RAG 集成（[X2 重新评估](../DECISIONS.md)）
 
 ### WhatsMicFix-LSPosed
 - 仓库：https://github.com/D4vRAM369/WhatsMicFix-LSPosed

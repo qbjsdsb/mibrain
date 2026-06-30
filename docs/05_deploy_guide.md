@@ -3,7 +3,7 @@
 > 本文档面向最终用户：拿到 MiBrain 后如何在红米 K50 Ultra 上跑起来。
 
 > **修订说明（2026-06-30）**：本文档已按最新决策更新，主要变更：
-> - **D7 修订**：推理后端从 llama-server HTTP 切回 JNI（参考 llama.android 官方模块 + ToolNeuron LlamaEngine.kt），不再有独立子进程
+> - **D7 修订**：推理后端从 llama-server HTTP 切回 JNI（参考 llama.android 官方模块 + ToolNeuron `InferenceService.kt` + `InferenceClient.kt`（位于 `service/inference/` 目录）），不再有独立子进程
 > - **X7 废弃**：llama-server HTTP 路径废弃，所有 `/health` 检查、`llama-server.log` 引用、`llama.cpp 二进制升级` 章节均失效
 > - **D21 新增**：模型存储路径改为 `/data/user_de/0/com.mibrain/files/models/`（DE 加密区 + Direct Boot），用户不再需要手动 mkdir `/sdcard/MiBrain/models/`
 > - **D22 新增**：ASR/TTS 模型换 Apache 2.0 许可的 sherpa-onnx 官方模型（弃用 paraformer/aishell3）
@@ -65,9 +65,9 @@ git clone https://github.com/qbjsdsb/mibrain.git
 | Qwen2.5-1.5B-Instruct Q4_K_M（默认） | https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf | ~1GB | 默认对话模型（[D1](../DECISIONS.md)） |
 | Qwen2.5-3B-Instruct Q4_K_M（备选） | https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF/resolve/main/qwen2.5-3b-instruct-q4_k_m.gguf | ~2GB | 质量优先可选 |
 | sherpa-onnx streaming-zipformer-bilingual-zh-en ASR | github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-streaming-zipformer-bilingual-zh-en.tar.bz2 | ~250MB | 语音识别（Apache 2.0，[D22](../DECISIONS.md)） |
-| sherpa-onnx vits-zh-ll 中文 TTS | huggingface.co/k2-fsa/sherpa-onnx/resolve/main/tts-models/sherpa-onnx-vits-zh-ll.tar.bz2 | ~150MB | 中文 TTS（Apache 2.0，[D22](../DECISIONS.md)） |
+| sherpa-onnx vits-zh-ll 中文 TTS | huggingface.co/k2-fsa/sherpa-onnx/resolve/main/tts-models/sherpa-onnx-vits-zh-ll.tar.bz2 | ~150MB | 中文 TTS（社区贡献，许可未明确声明；HF 卡 metadata 缺失，[D22](../DECISIONS.md)） |
 | silero_vad.onnx | sherpa-onnx release 自带 | ~10MB | VAD |
-| sherpa-onnx KWS zh-vgg | github.com/k2-fsa/sherpa-onnx/releases/download/kws-models/sherpa-onnx-keyword-spotting-zh-vgg.tar.bz2 | ~10MB | 唤醒词 KWS（[D23](../DECISIONS.md)） |
+| sherpa-onnx KWS zipformer-wenetspeech | github.com/k2-fsa/sherpa-onnx/releases/download/kws-models/sherpa-onnx-kws-zipformer-wenetspeech-3.3M-2024-01-01.tar.bz2 | ~10MB | 唤醒词 KWS（[D23](../DECISIONS.md)；原引用 `zh-vgg` 不存在，真实模型为 zipformer 架构） |
 
 合计默认配置约 1.4GB。
 
@@ -106,7 +106,7 @@ sha256sum qwen2.5-1.5b-instruct-q4_k_m.gguf
 # ├── silero_vad.onnx
 # ├── streaming-zipformer-bilingual-zh-en/
 # ├── vits-zh-ll/
-# └── kws-zh-vgg/
+# └── kws-zipformer-wenetspeech-3.3M-2024-01-01/
 
 # 先 push 到 /data/local/tmp/（中转，所有用户可写）
 adb push models /data/local/tmp/mibrain_models

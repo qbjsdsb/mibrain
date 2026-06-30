@@ -114,7 +114,7 @@ adb logcat | grep -iE "mibrain|AndroidRuntime"
 
 常见错误：
 - `UnsatisfiedLinkError: libsherpa-onnx-jni.so` → AAR 没正确集成，看 `app/jniLibs/arm64-v8a/`
-- `UnsatisfiedLinkError: libllama.so` → JNI wrapper 编译时未正确链接 libllama.so，检查 `app/src/main/jni/CMakeLists.txt`（参考 [llama.android 官方模块](https://github.com/ggml-org/llama.cpp/tree/master/llama.android)）
+- `UnsatisfiedLinkError: libllama.so` → JNI wrapper 编译时未正确链接 libllama.so，检查 `app/src/main/jni/CMakeLists.txt`（参考 [llama.android 官方模块](https://github.com/ggml-org/llama.cpp/tree/master/examples/llama.android)）
 - `directBootAware` 相关错误 → 检查 AndroidManifest.xml 是否声明（[D21](../DECISIONS.md)）
 - `SecurityException: RECORD_AUDIO` → 用户没授录音权限
 - `IllegalStateException: foregroundServiceType` → Manifest 缺 `foregroundServiceType="microphone"`
@@ -216,7 +216,7 @@ adb shell
 
 ### 6.2 现象：TTS 声音机械
 
-默认 TTS 模型为 sherpa-onnx-vits-zh-ll（Apache 2.0，[D22](../DECISIONS.md)）。如需更好自然度，可升级到 matcha-icefall-zh-baker + vocos（注意：需复核许可是否兼容 Apache 2.0，[D22](../DECISIONS.md)）：
+默认 TTS 模型为 sherpa-onnx-vits-zh-ll（社区贡献，许可未明确声明，[D22](../DECISIONS.md)；HF 卡未声明许可，分发 APK 存在风险）。如需更好自然度或规避许可风险，可升级到 matcha-icefall-zh-baker + vocos（matcha-icefall-zh-baker 已验证 Apache 2.0，[D22](../DECISIONS.md)）：
 ```
 https://huggingface.co/csukuangfj/matcha-icefall-zh-baker
 https://github.com/k2-fsa/sherpa-onnx/releases/download/vocoder-models/vocos-22khz-univ.onnx
@@ -349,5 +349,5 @@ watch -n 1 "cat /sys/class/thermal/thermal_zone*/temp"
 | 锁屏唤醒在 HyperOS 2 上不保证 | Phantom Mic 兼容性未验证 | Phase 4 真机测试 |
 | 8GB 内存峰值紧张 | 硬件限制 | 用 1.5B 模型 |
 | 中文唤醒词需自训 | sherpa-onnx KWS 默认英文，[D23](../DECISIONS.md) | MVP 用 hey_jarvis |
-| TTS 不够自然 | VITS vits-zh-ll 质量（[D22](../DECISIONS.md)），可升级到 matcha+vocos 但需复核许可 | 默认 vits-zh-ll，按需升级 |
+| TTS 不够自然 | VITS vits-zh-ll 质量（[D22](../DECISIONS.md)），可升级到 matcha+vocos（matcha-icefall-zh-baker 已验证 Apache 2.0） | 默认 vits-zh-ll，按需升级 |
 | 无 RAG | MVP 范围外 | 装 ToolNeuron 补 RAG |

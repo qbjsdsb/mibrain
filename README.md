@@ -10,7 +10,7 @@
 [![Phase](https://img.shields.io/badge/phase-0%20design%20frozen-yellow)](./DECISIONS.md)
 
 > **2026-06-30 修订说明**（深度检查 + 开源调研后第二轮调整）：
-> - **D7 修订**：推理后端从 llama-server HTTP 切回 JNI（参考 [llama.android](https://github.com/ggml-org/llama.cpp/tree/master/llama.android) 官方模块 + [ToolNeuron](https://github.com/Siddhesh2377/ToolNeuron) LlamaEngine.kt 样板），不再有独立子进程
+> - **D7 修订**：推理后端从 llama-server HTTP 切回 JNI（参考 [llama.android](https://github.com/ggml-org/llama.cpp/tree/master/examples/llama.android) 官方模块 + [ToolNeuron](https://github.com/Siddhesh2377/ToolNeuron) `InferenceService.kt` + `InferenceClient.kt`（位于 `service/inference/` 目录）样板），不再有独立子进程
 > - **X7 废弃**：llama-server HTTP 路径废弃，详见 [DECISIONS.md](./DECISIONS.md)
 > - **D1 修订**：默认模型从 3B 改为 1.5B Q4_K_M（~1GB），3B 作为质量优先可选
 > - **D21 新增**：模型路径改 DE 加密区 + Direct Boot（`/data/user_de/0/com.mibrain/files/models/`）
@@ -59,26 +59,26 @@ Phase 6-9 扩展功能设计稿：
 
 | 组件 | 选型 | 来源 |
 |---|---|---|
-| LLM 推理 | llama.cpp b9844 + 官方 [llama.android](https://github.com/ggml-org/llama.cpp/tree/master/llama.android) JNI 模块（参考 [ToolNeuron](https://github.com/Siddhesh2377/ToolNeuron) LlamaEngine.kt） | https://github.com/ggml-org/llama.cpp |
+| LLM 推理 | llama.cpp b9844 + 官方 [llama.android](https://github.com/ggml-org/llama.cpp/tree/master/examples/llama.android) JNI 模块（参考 [ToolNeuron](https://github.com/Siddhesh2377/ToolNeuron) `InferenceService.kt` + `InferenceClient.kt`） | https://github.com/ggml-org/llama.cpp |
 | 语音 ASR/TTS/VAD/KWS（全栈） | sherpa-onnx v1.13.3 AAR | https://github.com/k2-fsa/sherpa-onnx |
 | 默认对话模型 | Qwen2.5-1.5B-Instruct GGUF Q4_K_M（~1GB） | https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF |
 | 备选对话模型 | Qwen2.5-3B-Instruct GGUF Q4_K_M（~2GB，质量优先可选） | https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF |
 | 流式 ASR | sherpa-onnx streaming-zipformer-bilingual-zh-en（Apache 2.0） | https://github.com/k2-fsa/sherpa-onnx/releases |
-| 中文 TTS | sherpa-onnx vits-zh-ll（Apache 2.0） | https://huggingface.co/k2-fsa/sherpa-onnx |
+| 中文 TTS | sherpa-onnx vits-zh-ll（社区贡献，许可未明确声明；发布前需替换为 `matcha-icefall-zh-baker`） | https://huggingface.co/k2-fsa/sherpa-onnx |
 | VAD | silero_vad（Apache 2.0） | sherpa-onnx release 自带 |
-| 唤醒词 | sherpa-onnx KWS zh-vgg（Apache 2.0） | https://github.com/k2-fsa/sherpa-onnx/releases |
+| 唤醒词 | sherpa-onnx KWS zipformer-wenetspeech（Apache 2.0） | https://github.com/k2-fsa/sherpa-onnx/releases |
 | 模型存储 | DE 加密区 + Direct Boot（`/data/user_de/0/com.mibrain/files/models/`） | [D21](./DECISIONS.md) |
 | LSPosed 后台录音 hook | Phantom Mic 2.0 | https://github.com/Xposed-Modules-Repo/tn.amin.phantom_mic |
 | Root 框架 | KernelSU + ZygiskNext + LSPosed | https://kernelsu.org |
 | APK 开发语言 | Kotlin + Jetpack Compose | - |
-| JNI wrapper | C++ + JNI（参考 ToolNeuron LlamaEngine.kt） | 见 `app/src/main/jni/` |
+| JNI wrapper | C++ + JNI（参考 ToolNeuron `InferenceService.kt` + `InferenceClient.kt`） | 见 `app/src/main/jni/` |
 
 ## 借鉴的开源项目
 
 本项目借鉴以下开源项目（详细借鉴点见 [docs/00_design_overview.md](./docs/00_design_overview.md) §3）：
 
-- **[ToolNeuron](https://github.com/Siddhesh2377/ToolNeuron)** (Siddhesh2377) — Kotlin + Compose + llama.cpp + sherpa-onnx 全栈同构项目，LlamaEngine.kt JNI 调用范式 + AES-256-GCM 模型加密存储 + RAG 工程实践作为参考样板（258★，2026-05 仍活跃）
-- **[llama.android](https://github.com/ggml-org/llama.cpp/tree/master/llama.android)** (ggml-org 官方) — llama.cpp 官方 Android JNI 集成模块，作为 JNI wrapper 的实现基线
+- **[ToolNeuron](https://github.com/Siddhesh2377/ToolNeuron)** (Siddhesh2377) — Kotlin + Compose + llama.cpp + sherpa-onnx 全栈同构项目，`InferenceService.kt` + `InferenceClient.kt`（位于 `service/inference/` 目录）JNI 调用范式 + AES-256-GCM 模型加密存储 + RAG 工程实践作为参考样板（429★，2026-05 仍活跃）
+- **[llama.android](https://github.com/ggml-org/llama.cpp/tree/master/examples/llama.android)** (ggml-org 官方) — llama.cpp 官方 Android JNI 集成模块，作为 JNI wrapper 的实现基线
 - **[sherpa-onnx 官方 Android 示例](https://github.com/k2-fsa/sherpa-onnx/tree/master/android)** (k2-fsa) — ASR/TTS/VAD/KWS Kotlin API 调用范式
 - **[WhatsMicFix-LSPosed](https://github.com/D4vRAM369/WhatsMicFix-LSPosed)** (D4vRAM369) — LSPosed 双 scope 注入思路
 - **[HostAI](https://github.com/wannaphong/android-hostai)** (wannaphong) — LiteRT-LM 在 Android 上的可行证据（参考后已弃用此路）
@@ -114,7 +114,7 @@ Phase 6-9 扩展功能设计稿：
 | 项目名 | MiBrain | [D4](./DECISIONS.md) |
 | Root 环境 | KernelSU + ZygiskNext + LSPosed | [D5](./DECISIONS.md) |
 | 设备 | 红米 K50 Ultra（骁龙 8+ Gen 1, 8GB RAM, HyperOS 2） | [D6](./DECISIONS.md) |
-| 推理后端 | llama.cpp b9844 + llama.android JNI 模块 | [D7](./DECISIONS.md) |
+| 推理后端 | llama.cpp b9844 + 官方 examples/llama.android JNI 模块 | [D7](./DECISIONS.md) |
 | ASR/TTS 引擎 | sherpa-onnx v1.13.3 AAR | [D8](./DECISIONS.md) |
 | LSPosed | 装现成 Phantom Mic，不自写 | [D9](./DECISIONS.md) |
 | APK 开发语言 | Kotlin + Jetpack Compose | [D10](./DECISIONS.md) |

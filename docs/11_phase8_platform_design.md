@@ -50,7 +50,7 @@
 [外部请求] → NanoHTTPD (APK 内嵌, 8080) → LlamaEngine (JNI) → llama.cpp → 返回
 ```
 
-HTTP server 在 APK 进程内运行，直接调用 LlamaEngine.kt（参考 [ToolNeuron](https://github.com/Siddhesh2377/ToolNeuron) 实践），不跨进程/不跨 SELinux 域。
+HTTP server 在 APK 进程内运行，直接调用 LlamaEngine.kt（项目自命名；参考 [ToolNeuron](https://github.com/Siddhesh2377/ToolNeuron) 的 `InferenceService.kt` + `InferenceClient.kt`（位于 `service/inference/` 目录）实践），不跨进程/不跨 SELinux 域。
 
 ### 1.4 路径设计
 

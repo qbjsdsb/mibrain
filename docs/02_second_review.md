@@ -5,7 +5,7 @@
 > 结论：发现 5 个之前漏掉的问题，全部修订并并入设计
 >
 > **⚠️ 2026-06-30 二轮深度检查后的重大修订**（本审视记录保留作历史追溯）：
-> - **发现 1 已被推翻**（[X7 废弃](../DECISIONS.md)）：llama-server HTTP 路径在 Android 上有根因问题（S1/S2/S3），切回 JNI（[D7 修订](../DECISIONS.md)）。ToolNeuron 重新评估为 Kotlin+Compose 全栈，LlamaEngine.kt 可作为参考样板（[X2 修正](../DECISIONS.md)）
+> - **发现 1 已被推翻**（[X7 废弃](../DECISIONS.md)）：llama-server HTTP 路径在 Android 上有根因问题（S1/S2/S3），切回 JNI（[D7 修订](../DECISIONS.md)）。ToolNeuron 重新评估为 Kotlin+Compose 全栈，真实推理封装为 `InferenceService.kt` + `InferenceClient.kt`（位于 `service/inference/` 目录）可作为参考样板（[X2 修正](../DECISIONS.md)）
 > - **发现 2 已升级**：模型路径从"app 私有目录"进一步改为"DE 加密区 + Direct Boot"（[D21 新增](../DECISIONS.md)），解决 FBE 加密锁屏读不到模型
 > - **发现 4 已升级**：Phantom Mic 风险从"中"升级为"高"（[D14](../DECISIONS.md)），v2.0 已近 2 年未更新
 > - **发现 5 已升级**：唤醒词引擎从 openWakeWord 改为 sherpa-onnx KWS（[D23 新增](../DECISIONS.md)），弃用 openWakeWord
@@ -16,10 +16,10 @@
 
 ---
 
-## 发现 1：fork ToolNeuron 的 LlamaEngine.kt 路径不成立
+## 发现 1：fork ToolNeuron 的推理封装（原误称 LlamaEngine.kt，实为 InferenceService.kt + InferenceClient.kt）路径不成立
 
 ### 之前的判断
-"直接 fork ToolNeuron 的 LlamaEngine.kt（MIT 许可），省 1500+ 行 Kotlin 代码量"
+"直接 fork ToolNeuron 的推理封装（InferenceService.kt + InferenceClient.kt，MIT 许可），省 1500+ 行 Kotlin 代码量"
 
 ### 重新查证后发现
 - ToolNeuron 用的是**它自己写的 llama.cpp Android binding**，位于 `app/src/main/cpp/`
@@ -55,9 +55,9 @@
 > 3. **S2**：FBE 加密下锁屏首次解锁前 `/sdcard/` 是空 stub，service.sh 开机自启必然失败
 > 4. **S3**：Android stock ROM 不带 `curl`，service.sh 健康检查失效，watchdog 误判反复重启
 >
-> 同时 ToolNeuron 重新评估为 **Kotlin + Compose 全栈同构**（不是原判断的"C++ + JNI 不是纯 Kotlin"），LlamaEngine.kt 可作为参考样板（[X2 修正](../DECISIONS.md)）。
+> 同时 ToolNeuron 重新评估为 **Kotlin + Compose 全栈同构**（不是原判断的"C++ + JNI 不是纯 Kotlin"），真实推理封装 `InferenceService.kt` + `InferenceClient.kt`（位于 `service/inference/` 目录）可作为参考样板（[X2 修正](../DECISIONS.md)）。
 >
-> **最终结论**：切回 JNI（[D7 修订](../DECISIONS.md)），参考 llama.android 官方模块 + ToolNeuron LlamaEngine.kt 实现。
+> **最终结论**：切回 JNI（[D7 修订](../DECISIONS.md)），参考 llama.android 官方模块 + ToolNeuron `InferenceService.kt` + `InferenceClient.kt`（位于 `service/inference/` 目录）实现。
 
 ---
 
@@ -100,7 +100,7 @@ KSU 模块**也不打包模型**，只放二进制和脚本。
 > 同时模型清单更新（详见 [03_architecture_detail.md §1 关键文件路径](./03_architecture_detail.md)）：
 > - 默认模型从 Qwen2.5-3B 改为 **Qwen2.5-1.5B Q4_K_M**（~1GB，[D1 修订](../DECISIONS.md)）
 > - ASR 从 paraformer（CC BY-NC）改为 **sherpa-onnx-streaming-zipformer-bilingual-zh-en**（Apache 2.0，[D22](../DECISIONS.md)）
-> - TTS 从 aishell3（CC BY-NC-ND）改为 **sherpa-onnx-vits-zh-ll**（Apache 2.0，[D22](../DECISIONS.md)）
+> - TTS 从 aishell3（CC BY-NC-ND）改为 **sherpa-onnx-vits-zh-ll**（社区贡献，许可未明确声明；HF 卡未声明许可，[D22](../DECISIONS.md)）
 > - 唤醒词从 openWakeWord 改为 **sherpa-onnx KWS**（[D23 新增](../DECISIONS.md)）
 
 ---
@@ -166,12 +166,12 @@ KSU 模块**也不打包模型**，只放二进制和脚本。
 3. 或者**完全跳过唤醒词**，用桌面快捷方式/双击电源键触发，到 Phase 3 再升级
 
 ### 备选：sherpa-onnx KWS 中文模型
-- 已验证 `sherpa-onnx-keyword-spotting-zh-vgg.tar.bz2` 可下载
+- 已验证 `sherpa-onnx-kws-zipformer-wenetspeech-3.3M-2024-01-01.tar.bz2` 可下载（原引用 `zh-vgg` 不存在，真实模型为 zipformer 架构）
 - 但默认关键词是预设的，自定义仍需训练
 
 > **⚠️ 2026-06-30 二轮检查后升级**（[D23 新增](../DECISIONS.md)）：
 > 唤醒词引擎从 openWakeWord 改为 **sherpa-onnx KWS**（keyword spotting）：
-> 1. sherpa-onnx v1.13.3 已内置 KWS 能力（含 zh-vgg 模型），无需另装 openWakeWord + 自写 Kotlin wrapper
+> 1. sherpa-onnx v1.13.3 已内置 KWS 能力（含 zipformer KWS 模型，原引用 `zh-vgg` 不存在，真实模型为 zipformer 架构），无需另装 openWakeWord + 自写 Kotlin wrapper
 > 2. 统一技术栈：sherpa-onnx 一个 AAR 同时提供 ASR + TTS + VAD + KWS 四件套，减少依赖
 > 3. openWakeWord 自写 wrapper 与 sherpa-onnx 选型重复
 >
@@ -214,7 +214,7 @@ KSU 模块**也不打包模型**，只放二进制和脚本。
 | sherpa-onnx | ASR/TTS/VAD/KWS | 直接用 AAR |
 
 > **⚠️ 2026-06-30 二轮检查后更新借鉴清单**：
-> - ToolNeuron 从"仅参考结构"升级为"参考结构 + LlamaEngine.kt JNI 范式"（[X2 修正](../DECISIONS.md)）
+> - ToolNeuron 从"仅参考结构"升级为"参考结构 + `InferenceService.kt` + `InferenceClient.kt` JNI 范式"（[X2 修正](../DECISIONS.md)）
 > - llama.cpp 从"直接用二进制（llama-server HTTP）"改回"JNI 调用 libllama.so"（[D7 修订](../DECISIONS.md)）
 > - 唤醒词从 openWakeWord 改为 sherpa-onnx KWS，openWakeWord 不再列入借鉴清单（[D23](../DECISIONS.md)）
 > - 完整最新借鉴清单见 [00_design_overview.md §3](./00_design_overview.md)

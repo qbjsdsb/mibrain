@@ -46,15 +46,15 @@
 - **状态**: 已确认
 
 ### ✅ D7. 推理后端（2026-06-30 修订：切回 JNI）
-- **选择**: **llama.cpp b9844 + 官方 [llama.android](https://github.com/ggml-org/llama.cpp/tree/master/llama.android) JNI 模块**（参考 [ToolNeuron](https://github.com/Siddhesh2377/ToolNeuron) 的 LlamaEngine.kt 实践）
+- **选择**: **llama.cpp b9844 + 官方 [llama.android](https://github.com/ggml-org/llama.cpp/tree/master/examples/llama.android) JNI 模块**（参考 [ToolNeuron](https://github.com/Siddhesh2377/ToolNeuron) 的 `InferenceService.kt` + `InferenceClient.kt`（位于 `service/inference/` 目录）实践）
 - **修订原因**: 深度检查 + 开源调研后发现：
   1. **无任何先例**：所有主流 Android LLM 项目（PocketPal/ToolNeuron/Meta Llama Stack）均走 JNI，没人用 llama-server HTTP 常驻模式
   2. **HTTP 路径有一连串根因性问题**（见 [深度检查报告 S1/S2/S3](./docs/)）：
      - root 启动的 llama-server 在 `su` 域访问 `/sdcard/` 需 sepolicy 放行 fuse 类型
      - FBE 加密下锁屏首次解锁前 `/sdcard/` 是空 stub，开机自启必然失败
      - Android stock ROM 不带 `curl`，service.sh 健康检查失效
-  3. **ToolNeuron 实际是 Kotlin + Compose 全栈**（[原 X2 误判已修正](#-x2-fork-toolneuron-llamaenginekt-重新评估不再废弃)），LlamaEngine.kt 可参考
-- **代价**: APK 增 ~50MB（含 arm64-v8a 的 libllama.so + libggml.so），需写 ~1500 行 JNI wrapper（参考 ToolNeuron 已验证的实现）
+  3. **ToolNeuron 实际是 Kotlin + Compose 全栈**（[原 X2 误判已修正](#-x2-参考-toolneuron-推理封装原误称-llamaenginekt2026-06-30-重新评估不再废弃)），真实推理封装 `InferenceService.kt` + `InferenceClient.kt`（位于 `service/inference/`）可参考
+- **代价**: APK 增 ~30MB（含 arm64-v8a 的 libllama.so + libggml.so，实测数据来自日本 Pasona 部署实录），需写 ~1500 行 JNI wrapper（参考 ToolNeuron 已验证的实现）
 - **状态**: 已确认
 - **修订历史**: 初版 JNI → 第二轮审视改 HTTP（[02_second_review.md 发现 1](./docs/02_second_review.md)，已废弃） → 深度检查后切回 JNI（2026-06-30）
 - **关联废弃**: [X7. llama-server HTTP 路径](#-x7-llama-server-http-路径)
@@ -163,23 +163,76 @@
   | 能力 | 候选模型 | 许可 |
   |---|---|---|
   | 流式 ASR | sherpa-onnx-streaming-zipformer-bilingual-zh-en | Apache 2.0 |
-  | 中文 TTS | sherpa-onnx-vits-zh-ll（替代 aishell3）| Apache 2.0 |
+  | 中文 TTS | sherpa-onnx-vits-zh-ll（替代 aishell3）| 社区贡献，许可未明确声明（HF 卡 metadata 缺失） |
   | 英文 TTS | vits-vctk（ sherpa-onnx 官方）| Apache 2.0 |
   | VAD | silero_vad（sherpa-onnx 自带）| Apache 2.0 |
-  | KWS | sherpa-onnx-keyword-spotting-zh-vgg | Apache 2.0 |
+  | KWS | sherpa-onnx-kws-zipformer-wenetspeech-3.3M-2024-01-01 | Apache 2.0 |
 - **代价**: 中文 TTS 自然度可能略降（aishell3 训练数据更全），但避免法律风险
+- **vits-zh-ll 许可风险说明**（2026-06-30 三轮复核新增，纠正原"Apache 2.0"误述）:
+  - vits-zh-ll 是社区贡献模型，HF 卡（https://hf-mirror.com/csukuangfj/sherpa-onnx-vits-zh-ll）未声明许可，训练数据来源不明（模型卡仅一句话："This model is contributed by the community and trained using https://github.com/Plachtaa/VITS-fast-fine-tuning"）
+  - **风险评估**：分发 APK + 此模型可能存在许可风险
+  - **推荐替代**：升级到 `matcha-icefall-zh-baker`（Apache 2.0 已验证）
+  - **MVP 取舍**：Phase 2 仍可用 vits-zh-ll 测试自然度，Phase 5 发布前必须切换到 matcha-icefall-zh-baker 或确认 vits-zh-ll 许可
 - **关联**: 解决深度检查 S7；与 [D23](#-d23-唤醒词改用-sherpa-onnx-kws) 一起统一 sherpa-onnx 全栈
 - **状态**: 已确认
 - **日期**: 2026-06-30
 
 ### ✅ D23. 唤醒词改用 sherpa-onnx KWS（2026-06-30 新增）
 - **选择**: **弃用 openWakeWord，改用 sherpa-onnx 自带的 KWS 模块**（keyword spotting）
+- **KWS 模型选型**（原引用 `zh-vgg` 不存在，真实模型为 zipformer 架构，sherpa-onnx 官方 KWS 预训练清单全部为 Zipformer 架构）：
+  | 用途 | 模型 | 说明 |
+  |---|---|---|
+  | 默认中文 | `sherpa-onnx-kws-zipformer-wenetspeech-3.3M-2024-01-01` | 基于 WenetSpeech，MVP 默认推荐 |
+  | 备选中英双语 | `sherpa-onnx-kws-zipformer-zh-en-3M-2025-12-20` | 更新更小 3M，可作为升级选项 |
+  | 英文（hey_jarvis MVP） | `sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01` | 用于 hey_jarvis MVP |
+  - 所有 KWS 模型均为 Zipformer 架构，Apache 2.0 许可
 - **修订原因**:
-  1. sherpa-onnx v1.13.3 已内置 KWS 能力（含 zh-vgg 模型），无需另装 openWakeWord + 自写 Kotlin wrapper
+  1. sherpa-onnx v1.13.3 已内置 KWS 能力（含 zipformer KWS 模型，原引用 `zh-vgg` 不存在，真实模型为 zipformer 架构），无需另装 openWakeWord + 自写 Kotlin wrapper
   2. 统一技术栈：sherpa-onnx 一个 AAR 同时提供 ASR + TTS + VAD + KWS 四件套，减少依赖
   3. openWakeWord 自写 wrapper 是原 [00_design_overview.md §6](./docs/00_design_overview.md) 列的"重写为 Kotlin"，与 [D8](#-d8-asrtts-引擎) sherpa-onnx 选型重复
 - **代价**: 备选唤醒词模型可能没有 `hey_jarvis`，需用 sherpa-onnx 官方示例词或自训
 - **关联**: [D2](#-d2-唤醒词策略) 的"openWakeWord 没有现成中文模型"理由随此决策失效；与 [D22](#-d22-asrtts-模型许可友好化) 统一 sherpa-onnx 全栈
+- **状态**: 已确认
+- **日期**: 2026-06-30
+
+### ✅ D24. Qwen 商标使用限制（2026-06-30 新增）
+- **选择**: UI / README / 市场宣传**不写** "Powered by Qwen"，改用 "使用 Qwen2.5 模型" 等中性表述
+- **修订原因**: "Qwen" 是阿里达摩院注册商标，不可用于衍生品的市场宣传；本项目 Apache 2.0 许可下分发，需规避商标侵权风险
+- **影响范围**: app/README、GitHub README、UI 关于页面、Release 说明
+- **状态**: 已确认
+- **日期**: 2026-06-30
+
+### ✅ D25. Qwen2.5-1.5B function calling 限制（2026-06-30 新增）
+- **选择**: Phase 6 工具调用**必须**用 32-token CoT prompt，或换 Qwen2.5-3B 模型
+- **修订原因**: BFCL v3 实测 Qwen2.5-1.5B function calling 准确率：
+  - 直答（zero-shot）: 仅 **44%**
+  - 32-token CoT: 提升到 **64%**
+  - 长 CoT: 反崩到 **25%**（CoT 过长反而干扰结构化输出）
+- **代价**: 32-token CoT 增加 ~1s 首 token 延迟 + 占用 ctx；3B 模型内存峰值 7.67GB（[03 §6](./docs/03_architecture_detail.md)），仅作"质量优先"可选项
+- **关联**: [D1](#-d1-默认对话模型2026-06-30-修订)、[D17](#-d17-工具调用机制) 混合方案（关键词正则优先 + 兜底 LLM function calling）
+- **状态**: 已确认
+- **日期**: 2026-06-30
+
+### ✅ D26. TTS 无 chunk 回调（2026-06-30 新增）
+- **选择**: MVP 用 "先合成完整 PCM 再播" 模式；Phase 10 G6 字幕同步在 Kotlin 端按 200ms 切 PCM 数组成 chunk 喂 AudioTrack
+- **修订原因**: sherpa-onnx TTS 是 `OfflineTts`（一次性生成完整 PCM 数组），**无官方流式回调**，与"流式 ASR"不对称
+- **影响**:
+  - Phase 2 语音链路：长文本 TTS 需等整段合成完才开始播放，首音延迟略增
+  - Phase 9 / Phase 10 G6 字幕同步：需自己在 Kotlin 端按 200ms 切 PCM 数组成 chunk，对齐 AudioTrack 播放进度做字幕高亮
+- **代价**: MVP 不做字幕同步时影响小（仅首音延迟）；Phase 10 需额外写 PCM 切片 + 进度对齐逻辑
+- **关联**: [D8](#-d8-asrtts-引擎) sherpa-onnx 选型；[13_phase10_ux_enhancements_design.md](./docs/13_phase10_ux_enhancements_design.md) G6 字幕
+- **状态**: 已确认
+- **日期**: 2026-06-30
+
+### ✅ D27. Direct Boot + sherpa-onnx 未验证（2026-06-30 新增）
+- **选择**: Stage 1 PoC-A 设为**硬关卡**；不通过则放弃 Direct Boot，退到 "用户首次解锁后才启动" 模式
+- **修订原因**: 理论可行（BCR 已验证 Direct Boot + AudioRecord），但 sherpa-onnx 是否能在 Direct Boot 下加载 .so + ONNX 模型**无公开先例**，4 个子项需 PoC：
+  1. `.so` 加载（`System.loadLibrary` 在 Direct Boot 下能否找到 jniLibs）
+  2. ONNX 模型加载（能否读 DE 区模型文件）
+  3. ONNX Runtime 无 SharedPreferences 副作用（避免触发 CE 区访问）
+  4. HyperOS 2 不杀 Direct Boot 下的 FGS（前台服务）
+- **代价**: 若 PoC 不通过，Phase 4 "锁屏唤醒"验收标准降级为"用户首次解锁后可用"
+- **关联**: [D21](#-d21-模型存储路径2026-06-30-新增) DE + Direct Boot；[03_architecture_detail.md §2.1](./docs/03_architecture_detail.md) Direct Boot 支持
 - **状态**: 已确认
 - **日期**: 2026-06-30
 
@@ -190,10 +243,10 @@
 - **废弃原因**: Android 上 `CGO_ENABLED=0` DNS 会崩，NDK 编译门槛高
 - **废弃日期**: 2026-06-30
 
-### ✅ X2. fork ToolNeuron LlamaEngine.kt（2026-06-30 重新评估，不再废弃）
+### ✅ X2. 参考 ToolNeuron 推理封装（原误称 LlamaEngine.kt，2026-06-30 重新评估，不再废弃）
 - **原废弃原因（误判）**: 之前判断 "ToolNeuron 用的是自己写的 C++ + JNI，不是纯 Kotlin"
-- **重新评估结论**: 开源调研（2026-06-30）证实 ToolNeuron 是 **Kotlin + Jetpack Compose + llama.cpp + sherpa-onnx + Stable Diffusion + RAG 全栈同构**（258★，2026-05 仍活跃），LlamaEngine.kt 可作为参考样板
-- **新结论**: 不直接 fork 整个 ToolNeuron，但**强烈推荐作为代码参考样板**，特别是 LlamaEngine.kt 的 JNI 调用范式、模型加载/卸载、AES-256-GCM 加密存储等工程实践
+- **重新评估结论**: 开源调研（2026-06-30）证实 ToolNeuron 是 **Kotlin + Jetpack Compose + llama.cpp + sherpa-onnx + Stable Diffusion + RAG 全栈同构**（429★，2026-05 仍活跃），真实推理封装文件位于 `service/inference/` 目录：`InferenceService.kt`（57.8KB，主推理服务，AIDL 接口）+ `InferenceClient.kt`（43.9KB，客户端封装），可作为参考样板
+- **新结论**: 不直接 fork 整个 ToolNeuron，但**强烈推荐作为代码参考样板**，特别是 `InferenceService.kt` + `InferenceClient.kt`（位于 `service/inference/` 目录）的 JNI 调用范式、模型加载/卸载、AES-256-GCM 加密存储等工程实践
 - **关联决策**: 见 [D7](#-d7-推理后端2026-06-30-修订切回-jni)
 
 ### ❌ X3. HostAI + LiteRT-LM

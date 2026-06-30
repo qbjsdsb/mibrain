@@ -58,7 +58,7 @@ ConversationEngine
 - 纯关键词扩展性差，每个新工具要改正则
 - 混合方案：高频场景（天气/翻译/新闻）走关键词快速路径，长尾场景走 LLM
 
-> **备注（推理后端）**：Stage 2 不走 HTTP 调用 llama-server（[X7](../DECISIONS.md) 已废弃该路径），而是通过 JNI 调用 LlamaEngine.kt 的 `complete()` 或 `streamComplete()`。虽然 JNI 路径下不走 OpenAI 兼容的 `/v1/chat/completions` HTTP 接口，但 llama.cpp 的 chat template 仍支持 function calling 格式（参考 [ToolNeuron](https://github.com/Siddhesh2377/ToolNeuron) 的 LlamaEngine.kt 实现），即把 `tools` schema 拼到 prompt 里、解析模型输出中的 tool call 块。
+> **备注（推理后端）**：Stage 2 不走 HTTP 调用 llama-server（[X7](../DECISIONS.md) 已废弃该路径），而是通过 JNI 调用 LlamaEngine.kt 的 `complete()` 或 `streamComplete()`。虽然 JNI 路径下不走 OpenAI 兼容的 `/v1/chat/completions` HTTP 接口，但 llama.cpp 的 chat template 仍支持 function calling 格式（参考 [ToolNeuron](https://github.com/Siddhesh2377/ToolNeuron) 的 `InferenceService.kt` + `InferenceClient.kt`（位于 `service/inference/` 目录）实现），即把 `tools` schema 拼到 prompt 里、解析模型输出中的 tool call 块。
 
 ---
 
