@@ -4,7 +4,7 @@
 
 > **2026-06-30 修订说明**：
 > - **D7 修订**：llama.cpp 用途从 "作为 llama-server 二进制分发" 改为 "通过 JNI 调用（自编译 libllama.so + libggml.so 打入 APK `jniLibs/arm64-v8a/`）"
-> - **D1 修订**：默认对话模型从 Qwen2.5-3B-Instruct 改为 Qwen2.5-1.5B-Instruct（3B 作为质量优先可选）
+> - **D1 修订**：默认对话模型从 Qwen2.5-3B-Instruct 改为 Qwen2.5-1.5B-Instruct（3B 在 8GB 设备必 OOM（[D30](../DECISIONS.md)），仅 12GB+ 设备或 Phase 11+ Adreno GPU 加速后可选）
 > - **D22 新增**：ASR/TTS 模型换 Apache 2.0 许可的 sherpa-onnx 官方模型（弃用 CC BY-NC 4.0 的 paraformer + CC BY-NC-ND 4.0 的 aishell3）
 > - **D23 新增**：唤醒词改用 sherpa-onnx KWS（弃用 openWakeWord，本文件移除 openWakeWord 条目）
 > - **X2 修正**：ToolNeuron 重新评估为 Kotlin + Compose 全栈，作为参考样板
@@ -56,7 +56,7 @@
 ### Qwen2.5-3B-Instruct GGUF（备选对话模型）
 - 仓库：https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF
 - 许可：Qwen License（详见原仓库）
-- 用途：质量优先可选对话模型（[D1](../DECISIONS.md)）
+- 用途：⚠️ 8GB 设备必 OOM 不可用，仅 12GB+ 设备或 Phase 11+ Adreno GPU 加速后可选（[D30](../DECISIONS.md)；原 [D1](../DECISIONS.md) "质量优先可选"已被推翻）
 - 量化：Q4_K_M（~2GB）
 
 ### sherpa-onnx streaming-zipformer-bilingual-zh-en（流式 ASR）
@@ -68,7 +68,7 @@
 - 仓库：https://huggingface.co/k2-fsa/sherpa-onnx
 - 许可：社区贡献，许可未明确声明（HF 卡 metadata 缺失）。模型卡仅注明"This model is contributed by the community and trained using https://github.com/Plachtaa/VITS-fast-fine-tuning"，**官方未声明许可**，训练数据来源不明，**不可声称 Apache 2.0**
 - 用途：中文 TTS（[D22](../DECISIONS.md)，替代原 aishell3）
-- 风险与替代：分发 APK + 此模型可能存在许可风险；推荐升级到 `matcha-icefall-zh-baker`（Apache 2.0 已验证）；Phase 5 发布前必须切换或确认 vits-zh-ll 许可（详见 [D22](../DECISIONS.md)）
+- 风险与替代：分发 APK + 此模型可能存在许可风险；~~推荐升级到 `matcha-icefall-zh-baker`（Apache 2.0 已验证）~~ **第四轮 [F7](../docs/14_feasibility_recheck_and_plan.md) 订正：matcha-icefall-zh-baker 训练数据来自 Data-Baker，受 NC（非商业）限制，同样不可分发**。Phase 5 发布前必须另寻 Apache 2.0 中文 TTS 或自训，详见 [D22](../DECISIONS.md)
 
 ### silero_vad（VAD）
 - 仓库：https://github.com/k2-fsa/sherpa-onnx/releases
@@ -113,15 +113,15 @@
 
 ### ZygiskNext
 - 仓库：https://github.com/Dr-TSNG/ZygiskNext
-- 许可：Apache License 2.0
+- 许可：**专有许可（all rights reserved，自 v4-0.9.2 起变更；早期版本为 GPL-3.0）**
 - 用途：提供 Zygisk 运行时给 LSPosed
-- 说明：用户自行安装
+- 说明：用户自行安装。⚠️ 第六轮 R6 核实：自 v4-0.9.2 起许可证从 GPL-3.0 改为 "all rights reserved"，**禁止修改/再分发/提取模块内文件**。本项目仅引导用户自行安装，不分发 ZygiskNext 本体，合规；但若未来需在 KSU 模块内打包或修改 ZygiskNext，须另获作者授权
 
-### LSPosed
-- 仓库：https://github.com/LSPosed/LSPosed
+### LSPosed（Vector fork）
+- 仓库：https://github.com/JingMatrix/Vector
 - 许可：GNU General Public License v3.0
 - 用途：Xposed 框架，加载 Phantom Mic
-- 说明：用户自行安装
+- 说明：用户自行安装。原 `LSPosed/LSPosed` 仓库已 archive（停止维护），本项目按 [D9](../DECISIONS.md) 使用社区 fork `JingMatrix/Vector`（详见 [D9](../DECISIONS.md)）
 
 ## 借鉴项目（不直接使用代码，仅借鉴架构思路）
 

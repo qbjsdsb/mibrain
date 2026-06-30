@@ -216,10 +216,11 @@ adb shell
 
 ### 6.2 现象：TTS 声音机械
 
-默认 TTS 模型为 sherpa-onnx-vits-zh-ll（社区贡献，许可未明确声明，[D22](../DECISIONS.md)；HF 卡未声明许可，分发 APK 存在风险）。如需更好自然度或规避许可风险，可升级到 matcha-icefall-zh-baker + vocos（matcha-icefall-zh-baker 已验证 Apache 2.0，[D22](../DECISIONS.md)）：
+默认 TTS 模型为 sherpa-onnx-vits-zh-ll（社区贡献，许可未明确声明，[D22](../DECISIONS.md)；HF 卡未声明许可，分发 APK 存在风险）。~~如需更好自然度或规避许可风险，可升级到 matcha-icefall-zh-baker + vocos~~ **第四轮 [F7](./14_feasibility_recheck_and_plan.md) 订正：matcha-icefall-zh-baker 训练数据来自 Data-Baker，受 NC（非商业）限制，同样不可分发，不可作为合规升级路径**。Phase 5 发布前须另寻 Apache 2.0 中文 TTS 或自训：
 ```
-https://huggingface.co/csukuangfj/matcha-icefall-zh-baker
-https://github.com/k2-fsa/sherpa-onnx/releases/download/vocoder-models/vocos-22khz-univ.onnx
+# 已废弃路径（NC 限制，仅参考不可分发）
+# https://huggingface.co/csukuangfj/matcha-icefall-zh-baker
+# https://github.com/k2-fsa/sherpa-onnx/releases/download/vocoder-models/vocos-22khz-univ.onnx
 ```
 
 ### 6.3 现象：LLM 回答不相关
@@ -349,5 +350,5 @@ watch -n 1 "cat /sys/class/thermal/thermal_zone*/temp"
 | 锁屏唤醒在 HyperOS 3 上不保证 | Phantom Mic 兼容性未验证 | Phase 4 真机测试 |
 | 8GB 内存峰值紧张 | 硬件限制 | 用 1.5B 模型 |
 | 中文唤醒词需自训 | sherpa-onnx KWS 默认英文，[D23](../DECISIONS.md) | MVP 用 hey_jarvis |
-| TTS 不够自然 | VITS vits-zh-ll 质量（[D22](../DECISIONS.md)），可升级到 matcha+vocos（matcha-icefall-zh-baker 已验证 Apache 2.0） | 默认 vits-zh-ll，按需升级 |
+| TTS 不够自然 | VITS vits-zh-ll 质量（[D22](../DECISIONS.md)）；~~可升级到 matcha+vocos~~ **matcha-icefall-zh-baker 受 Data-Baker NC 限制不可分发（[F7](./14_feasibility_recheck_and_plan.md)）** | 默认 vits-zh-ll；Phase 5 前须另寻 Apache 2.0 中文 TTS 或自训 |
 | 无 RAG | MVP 范围外 | 装 ToolNeuron 补 RAG |

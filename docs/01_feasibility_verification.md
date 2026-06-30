@@ -7,7 +7,7 @@
 > **⚠️ 2026-06-30 二轮深度检查后的重大修订**（本报告保留作历史追溯，每个相关章节后都加了"二轮检查后"标注）：
 > - **推理后端从 llama-server HTTP 切回 JNI**（[D7 修订](../DECISIONS.md) + [X7 废弃](../DECISIONS.md)）：原 §一 #1 "llama-b9830-bin-android-arm64" 验证仍有效（说明 llama.cpp 有 android-arm64 编译产出），但用途从"KSU 模块内放 llama-server 二进制"改为"自编译 libllama.so + libggml.so 打入 APK jniLibs"
 > - **模型路径改 DE 加密区 + Direct Boot**（[D21 新增](../DECISIONS.md)）：从"app 私有目录"进一步改为 `/data/user_de/0/com.mibrain/files/models/`
-> - **默认模型从 3B 改 1.5B**（[D1 修订](../DECISIONS.md)）：3B 作为"质量优先"可选项
+> - **默认模型从 3B 改 1.5B**（[D1 修订](../DECISIONS.md)）：3B 在 8GB 设备必 OOM（[D30](../DECISIONS.md)），仅 12GB+ 设备或 Phase 11+ Adreno GPU 加速后可选
 > - **ASR/TTS 模型换 Apache 2.0 许可**（[D22 新增](../DECISIONS.md)）：原 §一 #5 paraformer (CC BY-NC) + #6 aishell3 (CC BY-NC-ND) 已弃用
 > - **唤醒词改 sherpa-onnx KWS**（[D23 新增](../DECISIONS.md)）：原 §一 #7 openWakeWord hey_jarvis.onnx 已弃用
 > - **ToolNeuron 重新评估**（[X2 修正](../DECISIONS.md)）：原"ToolNeuron 是 C++ + JNI 非 Kotlin"判断有误，实际是 Kotlin+Compose 全栈，真实推理封装为 `InferenceService.kt` + `InferenceClient.kt`（位于 `service/inference/` 目录），可作为参考样板
@@ -151,7 +151,7 @@ URL: https://github.com/Xposed-Modules-Repo/tn.amin.phantom_mic/releases/downloa
 matcha-icefall-zh-baker + vocos-22khz-univ.onnx
 ```
 
-可作为 TTS 的可选升级路径。当前 MVP 用 VITS-aishell3 跑通即可。
+~~可作为 TTS 的可选升级路径~~。**第四轮 [F7](./14_feasibility_recheck_and_plan.md) 订正：matcha-icefall-zh-baker 训练数据来自 Data-Baker，受 NC（非商业）限制，不可分发，此升级路径已废弃**。当前 MVP 用 vits-zh-ll 跑通即可，Phase 5 发布前须另寻 Apache 2.0 中文 TTS 或自训。
 
 ---
 
@@ -165,7 +165,7 @@ matcha-icefall-zh-baker + vocos-22khz-univ.onnx
 | ToolNeuron（参考样板） | - | github.com/Siddhesh2377/ToolNeuron | `InferenceService.kt` + `InferenceClient.kt`（位于 `service/inference/` 目录）JNI 范式参考（[X2 修正](../DECISIONS.md)） |
 | sherpa-onnx AAR | v1.13.3 | github.com/k2-fsa/sherpa-onnx/releases/tag/v1.13.3 | ASR/TTS/VAD/KWS 全栈 |
 | Qwen2.5-1.5B-Instruct GGUF Q4_K_M（默认） | - | huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF | 默认对话模型（[D1 修订](../DECISIONS.md)） |
-| Qwen2.5-3B-Instruct GGUF Q4_K_M（备选） | - | huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF | 质量优先可选（[D1 修订](../DECISIONS.md)） |
+| Qwen2.5-3B-Instruct GGUF Q4_K_M（备选） | - | huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF | ⚠️ 8GB 必 OOM 仅 12GB+ 可选（[D30](../DECISIONS.md)；原 [D1 修订](../DECISIONS.md) "质量优先可选"已被推翻） |
 | sherpa-onnx streaming-zipformer-bilingual-zh-en ASR | - | github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/... | 语音识别（Apache 2.0，[D22](../DECISIONS.md)） |
 | sherpa-onnx vits-zh-ll 中文 TTS | - | huggingface.co/k2-fsa/sherpa-onnx/resolve/main/tts-models/... | 语音合成（社区贡献，许可未明确声明；HF 卡 metadata 缺失，[D22](../DECISIONS.md)） |
 | sherpa-onnx silero_vad | - | sherpa-onnx release 自带 | VAD（Apache 2.0） |
@@ -177,7 +177,7 @@ matcha-icefall-zh-baker + vocos-22khz-univ.onnx
 > **2026-06-30 二轮检查后修订说明**：
 > - 默认模型从 3B 改为 1.5B（[D1 修订](../DECISIONS.md)）
 > - ASR 从 paraformer 改为 streaming-zipformer-bilingual（[D22](../DECISIONS.md)，许可友好）
-> - TTS 从 aishell3 改为 vits-zh-ll（[D22](../DECISIONS.md)，社区贡献、许可未明确声明；Phase 5 发布前需替换为 matcha-icefall-zh-baker）
+> - TTS 从 aishell3 改为 vits-zh-ll（[D22](../DECISIONS.md)，社区贡献、许可未明确声明；~~Phase 5 发布前需替换为 matcha-icefall-zh-baker~~ **第四轮 [F7](./14_feasibility_recheck_and_plan.md) 订正：matcha-icefall-zh-baker 受 Data-Baker NC 限制不可分发，发布前须另寻 Apache 2.0 中文 TTS 或自训**）
 > - 唤醒词从 openWakeWord 改为 sherpa-onnx KWS（[D23](../DECISIONS.md)）
 > - 新增 llama.android 官方 JNI 模块 + ToolNeuron 参考样板（[D7 修订](../DECISIONS.md)、[X2 修正](../DECISIONS.md)）
 
@@ -198,7 +198,7 @@ matcha-icefall-zh-baker + vocos-22khz-univ.onnx
 | 增强项 | 价值 | 实现路径 |
 |---|---|---|
 | OpenCL + Adreno GPU 加速 | 3B 模型 tok/s 翻倍 | 用 Snapdragon 工具链 Docker 镜像自编译，启用 `GGML_OPENCL=ON` + `GGML_HEXAGON=ON`，产物 `libggml-opencl.so` / `libggml-hexagon.so`（无 Android 预编译包，仅 Windows arm64 版） |
-| Matcha-TTS + Vocos | TTS 自然度提升 | 替换 VITS 为 matcha-icefall-zh-baker + vocos-22khz-univ.onnx（注意许可，需复核 [D22](../DECISIONS.md)） |
+| ~~Matcha-TTS + Vocos~~ | ~~TTS 自然度提升~~ | ~~替换 VITS 为 matcha-icefall-zh-baker~~ **已废弃：matcha-icefall-zh-baker 受 Data-Baker NC 限制不可分发（[F7](./14_feasibility_recheck_and_plan.md)）**；改路径：自训 Apache 2.0 中文 TTS 或等待社区贡献合规模型 |
 | sherpa-onnx QNN 后端 | 骁龙 NPU 加速 ASR/TTS | 用 `sherpa-onnx-v1.13.3-android-rknn.tar.bz2` 实验 |
 
 ---

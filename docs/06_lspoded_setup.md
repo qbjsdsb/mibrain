@@ -4,9 +4,7 @@
 
 > **2026-06-30 修订说明**（第三轮 web 核实 [F1](./14_feasibility_recheck_and_plan.md) + [F2](./14_feasibility_recheck_and_plan.md)）：
 > - **LSPosed 框架升级为 LSPosed Vector**（[D9](../DECISIONS.md)）：原 LSPosed 项目自 2024 年起活跃度下降，社区接力维护分支 **LSPosed Vector** 是当前唯一活跃维护版本
->   - v2.0.1：2026-04-21 发布
->   - v2.0.2：2026-05-05 发布
->   - **v2.0.3-7716：2026-05-20 发布**（本次设计冻结时最新）
+>   - **v2.0：2026-03-22 发布**（GitHub release tag；第六轮 R5 订正：原 v2.0.1/v2.0.2/v2.0.3-7716 在 `JingMatrix/Vector` 公开 release 页面无法对应，可能为内部 build 号/CI 产物/已下架，统一改为 v2.0）
 >   - 兼容性：Android 8.1 - Android 17 Beta 3
 > - **HyperOS 升级为 HyperOS 3**（[D6](../DECISIONS.md)）：HyperOS 3 国行版已对 K50U 推送 OS3.0.1.0.VLFCNXM（2026-01-20 OTA）/ OS3.0.2.0.VLFCNXM（2026-04-13 Fastboot），基于 Android 15
 > - Phantom Mic 风险升级为高（[D14](../DECISIONS.md)）：v2.0 自 2024-07 发布至本次设计冻结已近 2 年未更新，**第四轮 web 核实 [F5](./14_feasibility_recheck_and_plan.md) 确认上游已停滞 23 个月**（自 2024-07-24 v2.0 后零更新），**LSPosed Vector 框架升级 ≠ Phantom Mic 模块兼容性升级**，Phase 1 已确认无新版本，需验证降级方案（详见 [D14](../DECISIONS.md)）
@@ -19,7 +17,7 @@
 
 - ✅ KernelSU 已装且启用
 - ✅ ZygiskNext 已装且在 KSU 里启用
-- ✅ **LSPosed Vector v2.0.3-7716**（[D9](../DECISIONS.md)）已装且框架激活
+- ✅ **LSPosed Vector v2.0**（[D9](../DECISIONS.md)）已装且框架激活
 
 验证 LSPosed Vector 是否正常：
 
@@ -30,7 +28,7 @@ ls /data/adb/lspd
 # 应该有 config.bin, framework.jar 等文件
 ```
 
-或打开 LSPosed Vector Manager，主界面应该显示"激活"，并在关于页看到版本号 v2.0.3-7716。
+或打开 LSPosed Vector Manager，主界面应该显示"激活"，并在关于页看到版本号 v2.0（或更高版本，以实际 release 为准）。
 
 ⚠️ **重要**（[F1](./14_feasibility_recheck_and_plan.md) + 第四轮 [F4](./14_feasibility_recheck_and_plan.md) 订正来源）：原 LSPosed 项目（`LSPosed/LSPosed`）自 2024 年起活跃度下降，**不要再装原版 LSPosed**。本次设计冻结时唯一活跃维护版本是 LSPosed Vector（fork 自 LSPosed），**当前活跃维护的 fork 位于 `JingMatrix/Vector` 仓库**，下载入口见 [JingMatrix/Vector Releases](https://github.com/JingMatrix/Vector/releases)（Phase 1 实施前复查确认最新 build 号）。
 
@@ -148,12 +146,12 @@ adb logcat | grep -i phantom
 
 ⚠️ **风险升级（[D14](../DECISIONS.md)）**：Phantom Mic v2.0 自 2024-07 发布至本次设计冻结已近 2 年未更新，**第四轮 web 核实 [F5](./14_feasibility_recheck_and_plan.md) 确认上游已停滞 23 个月**（自 2024-07-24 v2.0 后零更新），HyperOS 3（Android 15）兼容性未验证且无官方更新，风险从"中"升级为"高"。Phase 1 已确认无新版本，需准备降级方案（appops + 双触发兜底 / WhatsMicFix 改造 / 放弃锁屏唤醒，详见 [D14](../DECISIONS.md)）。
 
-**LSPosed Vector 框架 ≠ Phantom Mic 模块**：LSPosed Vector v2.0.3 已支持 Android 8.1-17 Beta 3，框架本身可在 HyperOS 3 上激活。但 Phantom Mic 是 LSPosed Vector 模块，模块内部依赖的 LSPosed Vector API 版本可能滞后，仍可能失效。
+**LSPosed Vector 框架 ≠ Phantom Mic 模块**：LSPosed Vector v2.0 已支持 Android 8.1-17 Beta 3，框架本身可在 HyperOS 3 上激活。但 Phantom Mic 是 LSPosed Vector 模块，模块内部依赖的 LSPosed Vector API 版本可能滞后，仍可能失效。
 
 进入 Phase 1 启动前先复查（**第四轮 [F5](./14_feasibility_recheck_and_plan.md) 已确认无新版本，复查转为"确认降级方案可用性"**）：
 1. 去 https://github.com/Xposed-Modules-Repo/tn.amin.phantom_mic/releases 看是否有新版本（**第四轮已确认无**）
 2. 看 Issues 区是否有 HyperOS 3 / Android 15 兼容性反馈
-3. 同时确认 LSPosed Vector v2.0.3 在 HyperOS 3 K50U 上是否激活（无框架 = 模块也无用）
+3. 同时确认 LSPosed Vector v2.0 在 HyperOS 3 K50U 上是否激活（无框架 = 模块也无用）
 4. 上游已确认停滞，按以下方案 B/C/D 之一替代
 
 如果 Phase 4 真机验证 Phantom Mic 在 HyperOS 3 上无效：
@@ -162,7 +160,18 @@ adb logcat | grep -i phantom
 - HyperOS 1/2 基于 Android 12-15
 - 但降级会丢失系统新功能，且 HyperOS 3 已对 K50U 推送，不应再退
 
-**方案 B：用 appops 强制 + 双触发兜底**（首选降级方案，[D14](../DECISIONS.md)）
+**方案 B：WhatsMicFix-LSPosed 改造**（**首选降级**，第六轮 R5 升至此位，[D14](../DECISIONS.md)）
+
+> **第六轮 R5 订正**：原方案 B "appops + 双触发兜底" 与原方案 C "WhatsMicFix 改造" 互换排序。理由：WhatsMicFix-LSPosed 第六轮 web 核实仍活跃维护（commit `0715c57` 2026-03-15，距设计冻结仅 3 个月；75 commits；4 tags 含 v1.4 2025-10-28），hook 路径与 Phantom Mic 同为 LSPosed Vector 模块层 AudioRecord.cpp hook，**双 scope 注入架构可改造**（改 scope 配置 `com.whatsapp` → `com.mibrain` + 目标包名常量），改造后行为等价于 Phantom Mic，比纯 OS 级 appops 更接近原体验。
+
+- clone https://github.com/D4vRAM369/WhatsMicFix-LSPosed → 改 scope 配置 + 目标包名 → 编译 APK → 装到 K50U → LSPosed Vector 启用作用域 → 重启 → 验证锁屏录音可拿到非零字节 ≥ 80%（采样 30s × 3 次取最小值，`adb logcat | grep AudioRecord`）
+- **Phase 1 必做 PoC-B**（详见 [14_feasibility_recheck_and_plan.md Stage 1 PoC-B](./14_feasibility_recheck_and_plan.md)）：PoC-B 失败（hook 不生效 / 与 HyperOS 3 不兼容 / 改造工程量过大）则降级到方案 C
+- 同时评估 [XAudioCapture](https://github.com/wzhy90/XAudioCapture) 作为更轻量备选（hook 的是播放侧，对麦克风场景适配性未验证）
+
+**方案 C：appops 强制 + 双触发兜底**（次选降级，第六轮 R5 降至此位，作为兜底的兜底，[D14](../DECISIONS.md)）
+
+> **第六轮 R5 订正**：原方案 B 降至方案 C。理由：appops 仅修改 OS 级权限位，**无法绕过 MIUI AudioRecord.cpp 内部 native 层的 OP_RECORD_AUDIO 检查**（这正是 Phantom Mic 当初要解决的问题），HyperOS 3 上大概率仍返回 0 字节；此方案仅依赖 KSU 不依赖 LSPosed Vector，作为 WhatsMicFix 改造失败后的最后兜底。
+
 KSU 模块的 `post-fs-data.sh` 自动执行：
 ```bash
 appops set <mibrain_uid> RECORD_AUDIO allow
@@ -170,15 +179,10 @@ appops set <mibrain_uid> OP_RECORD_AUDIO allow
 ```
 APK 里加一个桌面快捷方式兜底（双击电源键 → 触发录音）。
 
-**方案 C：换用其他 LSPosed Vector 录音 hook 模块**
-候选：
-- [XAudioCapture](https://github.com/wzhy90/XAudioCapture)（主要 hook 播放录音，非麦克风）
-- [WhatsMicFix](https://github.com/D4vRAM369/WhatsMicFix-LSPosed)（专为 WhatsApp，可改造）
-
 **方案 D：放弃锁屏唤醒**（最坏情况，[D14](../DECISIONS.md)）
 - 仅保留亮屏可用（用户解锁后才能唤醒）
 - 牺牲 Phase 4 锁屏唤醒验收标准，但保留其他所有功能
-- Phase 11+ 可考虑自行 fork 维护或用 root + AAudio 自录
+- Phase 11+ 可考虑自行 fork 维护（基于 Phantom Mic v2.0 上游 + LSPosed Vector 当前 API）或用 root + AAudio 自录
 
 ### 6.2 模块冲突
 

@@ -60,6 +60,139 @@ ConversationEngine
 
 > **备注（推理后端）**：Stage 2 不走 HTTP 调用 llama-server（[X7](../DECISIONS.md) 已废弃该路径），而是通过 JNI 调用 LlamaEngine.kt 的 `complete()` 或 `streamComplete()`。虽然 JNI 路径下不走 OpenAI 兼容的 `/v1/chat/completions` HTTP 接口，但 llama.cpp 的 chat template 仍支持 function calling 格式（参考 [ToolNeuron](https://github.com/Siddhesh2377/ToolNeuron) 的 `InferenceService.kt` + `InferenceClient.kt`（位于 `service/inference/` 目录）实现），即把 `tools` schema 拼到 prompt 里、解析模型输出中的 tool call 块。
 
+### 1.1 function calling 落地细节（第六轮 R4 补，解决 5 项遗留）
+
+> 第六轮 R4 排查发现：原 §1 仅给出 Stage 1/2 混合架构图，缺 32-token CoT prompt 模板 / 关键词正则表 / fallback 机制 / 多工具测试方案 / 误触发率量化共 5 项。本节补强，作为 Phase 6 实施的**直接依据**。引用 [D25](../DECISIONS.md)（32-token CoT 准确率 64%）+ [D17](../DECISIONS.md)（混合方案）+ [03 §3.1](./03_architecture_detail.md) `completeWithTools()` 接口。
+
+#### 1.1.1 Stage 1 关键词正则表（MVP 必须命中场景，覆盖 80% 流量）
+
+| 工具 | 关键词正则（Kotlin `Regex`，大小写不敏感） | 命中示例 | 排他规则 |
+|---|---|---|---|
+| WeatherTool | `(天气|气温|下雨|下雪|会不会冷|几度|温度|weather|forecast)` | "明天天气"、"北京几度"、"会不会下雨" | 命中后不再走 Stage 2 |
+| TranslateTool | `(翻译|译成|translate\|how to say.*in)` | "翻译这句话"、"how to say hello in 中文" | 命中后切到 TranslateTool |
+| NewsTool | `(新闻|热点|头条|今日要闻|news|headline)` | "今日新闻"、"看下热点" | 命中后切到 NewsTool |
+| WebSearchTool | **不进 Stage 1**，仅走 Stage 2 | - | 关键词场景太宽（"查一下"、"帮我搜"无边界），强制走 LLM 决策 |
+
+**正则实现规范**（ToolRouter.kt）：
+```kotlin
+private val weatherRegex = Regex("(?i)(天气|气温|下雨|下雪|会不会冷|几度|温度|weather|forecast)")
+private val translateRegex = Regex("(?i)(翻译|译成|translate|how to say.*in)")
+private val newsRegex = Regex("(?i)(新闻|热点|头条|今日要闻|news|headline)")
+
+fun routeByKeyword(userText: String): Tool? {
+    return when {
+        weatherRegex.containsMatchIn(userText) -> WeatherTool
+        translateRegex.containsMatchIn(userText) -> TranslateTool
+        newsRegex.containsMatchIn(userText) -> NewsTool
+        else -> null  // 落到 Stage 2
+    }
+}
+```
+
+**误触发率量化门槛（[D25](../DECISIONS.md) 关联）**：Stage 1 关键词路由的误触发率（命中关键词但用户本意不是调该工具）必须 < 5%。测试方法：Phase 6 真机跑 200 句日常对话（含 50 句含"天气/翻译/新闻"关键词的干扰项，如"今天天气真不错啊"是闲聊不是问天气），统计错误路由次数。失败处理：收紧正则（如要求"天气"前/后有动词"查/看/告诉"），或在 Stage 1 命中后追加一次"确认意图"的 LLM 判定（消耗 1 次轻量 inference）。
+
+#### 1.1.2 Stage 2 LLM function calling（32-token CoT prompt 模板，[D25](../DECISIONS.md)）
+
+Qwen2.5-1.5B 直出 tool call 准确率仅 41%（BFCL v3 实测），加 32-token CoT 后提升到 64%。**prompt 模板固定为以下结构**（CoT 必须 ≤ 32 token，超过反崩到 25%）：
+
+```
+<|im_start|>system
+你是 MiBrain 语音助手。可选工具：
+- WeatherTool: 查询天气，参数 {location: string, date: string}
+- TranslateTool: 翻译文本，参数 {text: string, target_lang: string}
+- WebSearchTool: 联网搜索，参数 {query: string}
+- NewsTool: 获取新闻，参数 {category: string}
+
+用户说话后，先在 <CoT>...</CoT> 标签内用不超过 32 个 token 简短判断是否需要工具（如"用户问天气，调 WeatherTool"），如果需要工具则在 </CoT> 后输出：
+<tool>{"name":"WeatherTool","arguments":{"location":"北京","date":"明天"}}</tool>
+如果不需要工具则在 </CoT> 后直接回复用户。<|im_end|>
+<|im_start|>user
+{user_text}<|im_end|>
+<|im_start|>assistant
+<CoT>
+```
+
+**关键约束（native 推理循环实现，[03 §3.1](./03_architecture_detail.md) `completeWithTools()`）**：
+
+```cpp
+// llama_engine_jni.cpp: completeWithTools 推理循环（伪代码）
+int cot_token_count = 0;
+bool in_cot = true;          // 进入 <CoT> 段
+bool cot_truncated = false;  // 是否已强制切到 </CoT>
+
+while (true) {
+    llama_token tok = llama_sampler_sample(sampler, ctx, batch.n_tokens - 1);
+
+    // Phase 1：CoT 计数（仅限 <CoT> 段内）
+    if (in_cot && !cot_truncated) {
+        if (++cot_token_count >= 32) {
+            // 强制注入 </CoT> 起始 + <tool> 起始检测
+            llama_token close_think = lookup_token(vocab, "</CoT>");
+            batch = llama_batch_get_one(&close_think, 1);
+            in_cot = false;
+            cot_truncated = true;
+            continue;
+        }
+    }
+
+    // Phase 2：CoT 结束后只允许 <tool>...</tool> 或纯文本
+    if (cot_truncated) {
+        // 用 piece buffer 检测 <tool> 起始
+        // - 命中 <tool> 则进入 JSON 解析模式
+        // - 其他文本作为普通回答流式回调
+    }
+
+    if (llama_vocab_is_eog(vocab, tok)) break;
+}
+```
+
+- `<CoT>...</CoT>` 是项目自定义 CoT 标记（Qwen2.5-Instruct 词表中无此原生 token，需在 native 层用 `llama_tokenize` 把字符串 `"<CoT>"` / `"</CoT>"` 切为多个普通 token 并在 prompt 拼接时预填 `<CoT>` 起始 token）
+- CoT token 数由 native 层计数，**不计入 maxTokens 上限**（避免 32-token CoT 占满用户 maxTokens=100 的额度）
+- `</CoT>` 后只允许出现 `<tool>...</tool>` 或纯文本，由 ToolRouter.kt 用正则 `Regex("<tool>(\\{.*?\\})</tool>", RegexOption.DOT_MATCHES_ALL)` 解析 JSON
+- JSON 解析失败 → fallback 到 Stage 3（直接回退到离线模式纯文本回答）
+- `<tool>` 块外的文本一律视为 LLM 普通回答（不调工具）
+- 验收门槛（[D25](../DECISIONS.md)）：Phase 6 真机测 100 句工具调用，BFCL 等价准确率 ≥ 64%（与 [D25](../DECISIONS.md) 基准持平）；若 < 50% 则需重评是否引入 0.5B 意图分类器（[D17](../DECISIONS.md) Q5）
+
+#### 1.1.3 fallback 机制（3 级降级）
+
+```
+Stage 1 (关键词正则) → 命中则直接调工具
+   ↓ 未命中
+Stage 2 (LLM 32-token CoT) → 解析 <tool> JSON 成功则调工具
+   ↓ JSON 解析失败 / LLM 输出乱 / 超时 5s
+Stage 3 (离线纯文本回退) → LLM 基于已有知识直接回答用户（不调任何工具）
+   ↓ LLM 也失败（OOM / crash）
+Stage 4 (TTS 朗读固定话术) → "抱歉，工具调用失败，请稍后再试"
+```
+
+Stage 3 与 Stage 4 之间的差异：Stage 3 仍调 LLM（消耗推理资源），Stage 4 不调 LLM 直接 TTS。Stage 3 准入条件：LLM 进程健康（LlamaEngine 加载正常 + 非处于 native crash 自愈流程）。
+
+#### 1.1.4 多工具并发测试方案
+
+| 测试场景 | 用户输入 | 期望路由 | 验收门槛 |
+|---|---|---|---|
+| 单工具命中（Stage 1） | "明天天气怎么样" | WeatherTool | 100% 命中（关键词明确） |
+| 单工具命中（Stage 2） | "查一下北京明天会不会下雨" | WeatherTool（含"下雨"应走 Stage 1，但"查一下"是搜索信号需测 Stage 2 兜底） | ≥ 80% 命中 |
+| 多工具组合 | "翻译'明天天气'成英文" | TranslateTool 优先（嵌套场景按"外层意图"路由） | ≥ 70% 命中 |
+| 模糊意图 | "帮我看看最近的事" | Stage 2 → WebSearchTool 或 NewsTool | ≥ 50% 命中（容忍性测试） |
+| 无工具需求 | "你好" | Stage 2 → 纯文本回答 | 100% 不调工具 |
+| Stage 2 失败回退 | 故意触发 JSON 解析错（构造畸形 LLM 输出） | Stage 3 离线回答 | 100% 不卡死 |
+
+**测试数据集**：Phase 6 真机跑 100 句覆盖上述 6 类场景，统计路由准确率。整体准确率门槛 ≥ 75%（含 Stage 1+2+3 的总和准确率）。失败处理：扩充 Stage 1 关键词正则 / 调整 32-token CoT prompt 措辞 / 评估是否引入 0.5B 意图分类器（[D17](../DECISIONS.md) Q5 暂不做，但若准确率 < 60% 需重评）。
+
+#### 1.1.5 误触发率量化（Stage 1+2 综合）
+
+| 指标 | 门槛 | 测试方法 | 失败处理 |
+|---|---|---|---|
+| Stage 1 误触发率 | < 5% | 200 句日常对话（含 50 句含"天气/翻译/新闻"的干扰闲聊） | 收紧正则 |
+| Stage 2 误触发率 | < 10% | 同上数据集，跑 Stage 2 兜底分支 | 调 32-token CoT prompt |
+| 综合（Stage 1+2）误触发率 | < 8% | 加权平均 | 整体路由策略重评 |
+| 工具未触发率（漏触发） | < 15% | 100 句明确需要工具的输入 | 扩充关键词 / 改 CoT prompt |
+
+门槛依据：[D25](../DECISIONS.md) Qwen2.5-1.5B + 32-token CoT 准确率 64% 是 BFCL v3 基准，本项目期望通过 Stage 1 关键词快速路径把整体准确率拉到 75%+（关键词场景 100% 准确 + LLM 兜底 64% 加权）。
+
+**反向引用（第六轮 R4 补强）**：本节 §1.1.2 的 32-token CoT prompt 模板 + native 推理循环实现依赖 [15 §2.2](./15_technical_specs.md)（JNI 跨线程 callback 规范——`completeWithTools` 推理循环的 token callback 须在 native 线程 `AttachCurrentThread`，且 Kotlin callback 须 `NewGlobalRef` 持有）+ [15 §3.2](./15_technical_specs.md)（推理循环伪代码——CoT 计数 `cot_token_count` 与 `</CoT>` 强制注入须在该循环内实现，与 EOG 判断 / KV cache 检查同层）。两者共同构成 §1.1.2 native 落地的底层规范。
+
 ---
 
 ## 2. 4 个工具的 API 选型

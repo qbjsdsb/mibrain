@@ -222,7 +222,7 @@
 ┌────────────────────────────────────────────────────────────────────┐
 │ 模型资产（不打包进模块与 APK，APK 内置下载器引导用户下载）           │
 │  ├─ qwen2.5-1.5b-instruct-q4_k_m.gguf   (~1GB，默认，[D1](../DECISIONS.md))│
-│  ├─ qwen2.5-3b-instruct-q4_k_m.gguf     (~2GB，质量优先可选)       │
+│  ├─ qwen2.5-3b-instruct-q4_k_m.gguf     (~2GB，⚠️ 8GB 必 OOM 仅 12GB+，[D30])│
 │  ├─ sherpa-onnx-streaming-zipformer-bilingual-zh-en (流式 ASR，Apache 2.0)│
 │  ├─ sherpa-onnx-vits-zh-ll (TTS，~150MB，社区贡献许可未明确，[D22](../DECISIONS.md))│
 │  ├─ silero_vad.onnx (VAD，~10MB，sherpa-onnx 自带)                 │

@@ -1,6 +1,6 @@
 # MiBrain
 
-> 针对小米 HyperOS 3 的完全离线本地 LLM 语音助手方案
+> 针对小米 HyperOS 3 的默认完全离线本地 LLM 语音助手方案（Phase 6 起可选启用联网扩展，仍以离线为默认模式）
 > 把"模型推理 + 语音 IO + 后台保活"三件事打包到一个 APK + KSU 模块里，刷入即用。
 
 [![Status](https://img.shields.io/badge/status-design%20frozen-brightgreen)](./docs/00_design_overview.md)
@@ -13,7 +13,7 @@
 > - **D7 修订**：推理后端从 llama-server HTTP 切回 JNI（参考 [llama.android](https://github.com/ggml-org/llama.cpp/tree/master/examples/llama.android) 官方模块 + [ToolNeuron](https://github.com/Siddhesh2377/ToolNeuron) `InferenceService.kt` + `InferenceClient.kt`（位于 `service/inference/` 目录）样板），不再有独立子进程
 > - **D7 版本号订正（第四轮 [F3](./docs/14_feasibility_recheck_and_plan.md)）**：llama.cpp 锁定版本从 b9844 改为 **b9830**（b9844 在 2026-06-30 尚未发布，b9830 为 2026-06-28 最新 release）
 > - **X7 废弃**：llama-server HTTP 路径废弃，详见 [DECISIONS.md](./DECISIONS.md)
-> - **D1 修订**：默认模型从 3B 改为 1.5B Q4_K_M（~1GB），3B 作为质量优先可选（第四轮重算后 3B 在 8GB 设备必 OOM，详见 [03 §6](./docs/03_architecture_detail.md)）
+> - **D1 修订**：默认模型从 3B 改为 1.5B Q4_K_M（~1GB），3B 在 8GB 设备必 OOM（[D30](./DECISIONS.md)），仅 12GB+ 设备或 Phase 11+ Adreno GPU 加速后可选
 > - **D21 新增**：模型路径改 DE 加密区 + Direct Boot（`/data/user_de/0/com.mibrain/files/models/`）
 > - **D22 新增**：ASR/TTS 模型换 Apache 2.0 许可的 sherpa-onnx 官方模型（弃用 CC BY-NC 的 paraformer/aishell3；第四轮 [F7](./docs/14_feasibility_recheck_and_plan.md) 确认 matcha-icefall-zh-baker 也不是合规替代，受 Data-Baker NC 限制）
 > - **D23 新增**：唤醒词改用 sherpa-onnx KWS（弃用 openWakeWord，统一 sherpa-onnx 全栈；第四轮 [F6](./docs/14_feasibility_recheck_and_plan.md) 修正 WenetSpeech 许可表述为"自相矛盾"）
@@ -70,7 +70,7 @@ Phase 6-10 扩展功能设计稿：
 | LLM 推理 | llama.cpp b9830 + 官方 [llama.android](https://github.com/ggml-org/llama.cpp/tree/master/examples/llama.android) JNI 模块（参考 [ToolNeuron](https://github.com/Siddhesh2377/ToolNeuron) `InferenceService.kt` + `InferenceClient.kt`） | https://github.com/ggml-org/llama.cpp |
 | 语音 ASR/TTS/VAD/KWS（全栈） | sherpa-onnx v1.13.3 AAR | https://github.com/k2-fsa/sherpa-onnx |
 | 默认对话模型 | Qwen2.5-1.5B-Instruct GGUF Q4_K_M（~1GB） | https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF |
-| 备选对话模型 | Qwen2.5-3B-Instruct GGUF Q4_K_M（~2GB，质量优先可选） | https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF |
+| 备选对话模型 | Qwen2.5-3B-Instruct GGUF Q4_K_M（~2GB，⚠️ 8GB 设备必 OOM 不可用，仅 12GB+ 设备或 Phase 11+ Adreno GPU 加速后可选，[D30](./DECISIONS.md)） | https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF |
 | 流式 ASR | sherpa-onnx streaming-zipformer-bilingual-zh-en（Apache 2.0） | https://github.com/k2-fsa/sherpa-onnx/releases |
 | 中文 TTS | sherpa-onnx vits-zh-ll（社区贡献，许可未明确声明；**matcha-icefall-zh-baker 不是合规替代**，受 Data-Baker NC 限制，[D22](./DECISIONS.md)） | https://huggingface.co/k2-fsa/sherpa-onnx |
 | VAD | silero_vad（Apache 2.0） | sherpa-onnx release 自带 |

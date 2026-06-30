@@ -202,15 +202,22 @@
   5. **HyperOS 3** 的"超级省电"不在解锁前杀 FGS
 - **不通过** → 退路：放弃 Direct Boot 模式，回退到 "用户首次解锁后才启动"（牺牲锁屏唤醒能力，但保留其他所有功能）
 
-#### PoC-B：Phantom Mic 在 HyperOS 3 上的兼容性（硬关卡，依赖 LSPosed Vector 框架激活）
-- 装 LSPosed Vector v2.0.3-7716（[D9](../DECISIONS.md)）
-- 装 Phantom Mic v2.0
-- LSPosed Vector 启用 + 作用域勾选测试 APK
-- 锁屏后 AudioRecord.read() 是否返回真实数据
+#### PoC-B：WhatsMicFix 改造验证（硬关卡，第六轮 R5 重定义；原 Phantom Mic 兼容性验证已合并到此）
+
+> **第六轮 R5 订正**：原 PoC-B 定义为 "Phantom Mic 在 HyperOS 3 上的兼容性验证"，但 [D14](../DECISIONS.md) 第六轮 R5 已确认 Phantom Mic 上游自 2024-07-24 v2.0 后停滞 23 个月且无新版，且 WhatsMicFix-LSPosed 第六轮 web 核实仍活跃维护（commit `0715c57` 2026-03-15 / 75 commits / 4 tags 含 v1.4 2025-10-28），双 scope 注入架构可改造。故 PoC-B 重定义为 WhatsMicFix 改造验证，Phantom Mic 兼容性验证合并到此 PoC 的"对照测试"分支（仍可单独跑作为基线，但不再是首选路径）。
+
+- 装 LSPosed Vector v2.0（[D9](../DECISIONS.md)，第六轮 R5 订正版本号；原 v2.0.3-7716 无法对应公开 release）
+- **主路径（WhatsMicFix 改造）**：
+  1. clone https://github.com/D4vRAM369/WhatsMicFix-LSPosed
+  2. 改 scope 配置（`com.whatsapp` → `com.mibrain`）+ 改目标包名常量
+  3. 编译 APK（Android Studio + Gradle）
+  4. 装到 K50U + 在 LSPosed Vector 启用作用域 + 重启
+  5. 锁屏后 `AudioRecord.read()` 是否返回非零字节 ≥ 80%（采样 30s × 3 次取最小值，`adb logcat | grep AudioRecord`）
+- **对照路径（Phantom Mic 兼容性基线，可选）**：装 Phantom Mic v2.0 + LSPosed Vector 启用 + 作用域勾选测试 APK + 锁屏后 `AudioRecord.read()` 是否返回真实数据
 - **同时验证**：LSPosed Vector 框架本身在 HyperOS 3 K50U 上是否激活（无框架 = 模块也无用，[D14](../DECISIONS.md)）
-- **不通过** → 退路：
-  1. 评估替代品（搜索上游 Issues / 其他 hook 项目）
-  2. 退到 appops + 双触发兜底（[06_lspoded_setup.md §6.1](./06_lspoded_setup.md) 方案 B）
+- **不通过** → 退路（按 [D14](../DECISIONS.md) 第六轮 R5 排序）：
+  1. 评估 XAudioCapture 作为更轻量备选（hook 的是播放侧，对麦克风场景适配性未验证）
+  2. 退到 appops + 双触发兜底（[06_lspoded_setup.md §6.1](./06_lspoded_setup.md) 方案 C；**注意**：appops 仅改 OS 权限位，不绕 MIUI AudioRecord.cpp 内部检查，大概率仍返回 0 字节）
   3. 最坏情况：放弃锁屏唤醒，仅亮屏可用
 
 #### PoC-C：JNI wrapper 编译可行性
@@ -257,8 +264,8 @@
 
 **交付物**：
 - [ ] sherpa-onnx StreamingAsr 集成（zipformer-bilingual-zh-en-2023-02-20）
-- [ ] sherpa-onnx OfflineTts 集成（vits-zh-ll，**注意无 chunk 回调**，需自切 PCM 喂 AudioTrack；许可遗留待 Phase 5 解决）
-- [ ] sherpa-onnx VoiceActivityDetector 集成（silero_vad）
+- [ ] sherpa-onnx OfflineTts 集成（vits-zh-ll；第六轮 R1 订正：有 `generateWithCallback` 进度回调可用于流式播放，非"无 chunk 回调"；许可遗留待 Phase 5 解决）
+- [ ] sherpa-onnx `Vad` 集成（silero_vad；第六轮 R1 订正类名，原 `VoiceActivityDetector` 不存在）
 - [ ] 前台服务 + WakeLock + 状态机 CAS
 - [ ] 录音权限请求 UI
 
@@ -326,7 +333,7 @@
 
 **交付物**：
 - [ ] CI/CD（GitHub Actions：APK 自动构建 + KSU zip 打包）
-- [ ] Release v0.1.0：APK + KSU zip + Phantom Mic + **LSPosed Vector v2.0.3** 安装指引
+- [ ] Release v0.1.0：APK + KSU zip + Phantom Mic + **LSPosed Vector v2.0** 安装指引（第六轮 R5 订正版本号）
 - [ ] 性能基准 [08_performance_bench.md](./08_performance_bench.md)
 - [ ] 用户文档（[05_deploy_guide.md](./05_deploy_guide.md) 已就绪，含 9 步白名单 + HyperOS 3 前置）
 - [ ] Issue 模板 + 用户反馈通道

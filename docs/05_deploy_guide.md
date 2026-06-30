@@ -8,7 +8,7 @@
 > - **D21 新增**：模型存储路径改为 `/data/user_de/0/com.mibrain/files/models/`（DE 加密区 + Direct Boot），用户不再需要手动 mkdir `/sdcard/MiBrain/models/`
 > - **D22 新增**：ASR/TTS 模型换 Apache 2.0 许可的 sherpa-onnx 官方模型（弃用 paraformer/aishell3）
 > - **D23 新增**：唤醒词改 sherpa-onnx KWS（弃用 openWakeWord）
-> - **D1 修订**：默认模型从 3B 改为 1.5B Q4_K_M（~1GB），3B 作为质量优先可选
+> - **D1 修订**：默认模型从 3B 改为 1.5B Q4_K_M（~1GB），3B 在 8GB 设备必 OOM（[D30](../DECISIONS.md)），仅 12GB+ 设备或 Phase 11+ Adreno GPU 加速后可选
 >
 > 详见 [DECISIONS.md](../DECISIONS.md)。
 
@@ -24,13 +24,13 @@
 | 系统 | **HyperOS 3**（Android 15，[D6](../DECISIONS.md)）| 设置 → 我的设备 → MIUI 版本（应为 OS3.0.1.0.VLFCNXM 或更高；2026-01-20 已对 K50U 推送） |
 | Root | KernelSU 已装且工作 | KSU Manager 应用可打开 |
 | Zygisk | ZygiskNext 已装且启用 | LSPosed Vector 显示"Zygisk 已注入" |
-| LSPosed | **LSPosed Vector v2.0.3-7716**（[D9](../DECISIONS.md)，2026-05-20 最新版）| LSPosed Vector Manager 显示框架激活；支持 Android 8.1-17 Beta 3 |
+| LSPosed | **LSPosed Vector v2.0**（[D9](../DECISIONS.md)，2026-03-22 GitHub release tag）| LSPosed Vector Manager 显示框架激活；支持 Android 8.1-17 Beta 3 |
 | 存储 | 至少 5GB 可用空间 | 文件管理器查看 |
 | 网络 | 首次配置需联网下载 ~1.4GB 模型（默认配置） | - |
 
 > ⚠️ **2026-06-30 第三轮 web 核实修订**（[F2](./14_feasibility_recheck_and_plan.md)）：
 > - 系统：原"HyperOS 1+"升级为"HyperOS 3"。HyperOS 3 国行版已对 K50U 推送：OS3.0.1.0.VLFCNXM（2026-01-20 OTA）/ OS3.0.2.0.VLFCNXM（2026-04-13 Fastboot 包）。如未升级，先在系统更新里升级，再做后续步骤。
-> - LSPosed：原"LSPosed"升级为"LSPosed Vector v2.0.3-7716"。LSPosed 原项目自 2024 年起活跃度下降，社区接力维护分支 **LSPosed Vector** 是当前唯一活跃维护版本（[D9](../DECISIONS.md)）。如已装 LSPosed 原版，先卸载再装 LSPosed Vector。
+> - LSPosed：原"LSPosed"升级为"LSPosed Vector v2.0"。LSPosed 原项目自 2024 年起活跃度下降，社区接力维护分支 **LSPosed Vector**（`JingMatrix/Vector` fork）是当前唯一活跃维护版本（[D9](../DECISIONS.md)，第六轮 R5 订正版本号）。如已装 LSPosed 原版，先卸载再装 LSPosed Vector。
 
 不满足任何一项 → 先解决再继续。
 
@@ -67,7 +67,7 @@ git clone https://github.com/qbjsdsb/mibrain.git
 | 文件 | 下载地址 | 大小 | 用途 |
 |---|---|---|---|
 | Qwen2.5-1.5B-Instruct Q4_K_M（默认） | https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf | ~1GB | 默认对话模型（[D1](../DECISIONS.md)） |
-| Qwen2.5-3B-Instruct Q4_K_M（备选） | https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF/resolve/main/qwen2.5-3b-instruct-q4_k_m.gguf | ~2GB | 质量优先可选 |
+| Qwen2.5-3B-Instruct Q4_K_M（备选） | https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF/resolve/main/qwen2.5-3b-instruct-q4_k_m.gguf | ~2GB | ⚠️ 8GB 必 OOM 仅 12GB+ 可选（[D30](../DECISIONS.md)） |
 | sherpa-onnx streaming-zipformer-bilingual-zh-en ASR | github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-streaming-zipformer-bilingual-zh-en.tar.bz2 | ~250MB | 语音识别（Apache 2.0，[D22](../DECISIONS.md)） |
 | sherpa-onnx vits-zh-ll 中文 TTS | huggingface.co/k2-fsa/sherpa-onnx/resolve/main/tts-models/sherpa-onnx-vits-zh-ll.tar.bz2 | ~150MB | 中文 TTS（社区贡献，许可未明确声明；HF 卡 metadata 缺失，[D22](../DECISIONS.md)） |
 | silero_vad.onnx | sherpa-onnx release 自带 | ~10MB | VAD |
