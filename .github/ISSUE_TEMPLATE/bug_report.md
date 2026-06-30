@@ -7,7 +7,7 @@ assignees: ''
 ## 设备信息
 
 - 手机型号: 
-- 系统: (e.g. HyperOS 2.0 / Android 15)
+- 系统: (e.g. HyperOS 3.0 / Android 15)
 - Root 方案: (e.g. KernelSU v1.0 + ZygiskNext + LSPosed)
 - MiBrain 版本: 
 - 是否装了 Phantom Mic: 
@@ -29,7 +29,7 @@ assignees: ''
 ## 日志
 
 ```
-<贴 logcat / KSU 日志 / daemon 日志>
+<贴 logcat / KSU 日志 / APK 内部日志（LlamaEngine/Sherpa）>
 ```
 
 ## 截图

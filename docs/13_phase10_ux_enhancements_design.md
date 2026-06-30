@@ -397,7 +397,7 @@ IDLE
 | 双击电源键在 MIUI 上被系统拦截 | 高 | 方案 C 兜底；方案 A 需 LSPosed 注入工程量 |
 | PAUSED 状态忘记恢复 | 低 | 5 分钟超时自动回 IDLE + 通知栏提示 |
 | 模型常驻 5 分钟内存压力 | 中 | PAUSED 5 分钟超时后卸载模型回 IDLE；可配置超时 |
-| Widget 在 HyperOS 2 上被限制 | 中 | 通知按钮作为 Widget 的 fallback |
+| Widget 在 HyperOS 3 上被限制 | 中 | 通知按钮作为 Widget 的 fallback |
 
 ---
 

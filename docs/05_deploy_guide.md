@@ -24,7 +24,7 @@
 | 系统 | **HyperOS 3**（Android 15，[D6](../DECISIONS.md)）| 设置 → 我的设备 → MIUI 版本（应为 OS3.0.1.0.VLFCNXM 或更高；2026-01-20 已对 K50U 推送） |
 | Root | KernelSU 已装且工作 | KSU Manager 应用可打开 |
 | Zygisk | ZygiskNext 已装且启用 | LSPosed Vector 显示"Zygisk 已注入" |
-| LSPosed | **LSPosed Vector v2.0.3-7716**（[D9](../DECISIONS.md)，2026-05-20 最新版）| LSPosed Manager 显示框架激活；支持 Android 8.1-17 Beta 3 |
+| LSPosed | **LSPosed Vector v2.0.3-7716**（[D9](../DECISIONS.md)，2026-05-20 最新版）| LSPosed Vector Manager 显示框架激活；支持 Android 8.1-17 Beta 3 |
 | 存储 | 至少 5GB 可用空间 | 文件管理器查看 |
 | 网络 | 首次配置需联网下载 ~1.4GB 模型（默认配置） | - |
 
@@ -283,14 +283,14 @@ adb logcat | grep MiBrain
 
 ---
 
-## 6. 安装 LSPosed Phantom Mic 模块
+## 6. 安装 LSPosed Vector Phantom Mic 模块
 
 详见 [06_lspoded_setup.md](./06_lspoded_setup.md)。
 
 简版步骤：
 1. 下载 https://github.com/Xposed-Modules-Repo/tn.amin.phantom_mic/releases/download/3-2.0/PhantomMic-2.0.apk
 2. `adb install PhantomMic-2.0.apk`
-3. 打开 LSPosed Manager → 模块 → 启用 Phantom Mic
+3. 打开 LSPosed Vector Manager → 模块 → 启用 Phantom Mic
 4. 在 Phantom Mic 范围里勾选 MiBrain
 5. 重启手机
 
@@ -336,7 +336,7 @@ adb uninstall com.mibrain
 KSU Manager → 模块 → MiBrain → 删除 → 重启
 
 ### 8.3 卸载 Phantom Mic
-LSPosed → 禁用 → 卸载 APK
+LSPosed Vector → 禁用 → 卸载 APK
 
 ### 8.4 清理模型（可选）
 ```bash
@@ -373,7 +373,7 @@ KSU Manager → 模块 → 从存储安装新版 zip → 重启
 |---|---|---|
 | 打开 APK 提示"LlamaEngine 加载失败" | JNI 加载失败 / 模型路径错 / .so 缺失 | 检查 DE 区模型完整性，看 `install.log` 与 logcat |
 | 说唤醒词没反应 | KWS 阈值太高 / 麦克风被拦 | 降阈值 / 装 Phantom Mic |
-| 锁屏后唤醒失败 | MIUI 杀进程 / Direct Boot 未生效 | 重新做 §5 全部 8 步；确认 APK 声明 `directBootAware=true`（[D21](../DECISIONS.md)） |
+| 锁屏后唤醒失败 | MIUI 杀进程 / Direct Boot 未生效 | 重新做 §5 全部 9 步；确认 APK 声明 `directBootAware=true`（[D21](../DECISIONS.md)） |
 | 回应很慢（>15s） | 模型太大 / 内存压力 | 已是默认 Qwen2.5-1.5B；切到 3B 反而更慢，先看内存 |
 | TTS 声音不自然 | VITS 模型质量 | 升级到 matcha-icefall-zh-baker 等，**但许可需复核**（[D22](../DECISIONS.md)，默认配置已是 Apache 2.0 友好） |
 | 内存不足被杀 | 系统压力大 | 关闭其他大内存 App；切回 1.5B 默认 |

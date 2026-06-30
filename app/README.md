@@ -28,7 +28,7 @@ app/                                # MiBrain APK（Android Studio 项目）
 
 - [ ] Gradle 项目骨架 + libs.versions.toml
 - [ ] MainActivity + Compose UI 最简界面
-- [ ] LlamaEngine.kt（项目自命名，与 ToolNeuron 实际文件名 InferenceService.kt 区分；实现思路参考 ToolNeuron 的 InferenceService.kt 与 llama.android 官方模块的 InferenceEngine；HTTP 调用本地 llama-server）
+- [ ] LlamaEngine.kt（项目自命名，与 ToolNeuron 实际文件名 InferenceService.kt 区分；实现思路参考 ToolNeuron 的 InferenceService.kt 与 llama.android 官方模块的 InferenceEngine；**通过 JNI 调用 libllama.so**，[D7](../DECISIONS.md)）
 - [ ] 一次性对话生成（非流式，非语音）
 - [ ] 模型选择 UI
 

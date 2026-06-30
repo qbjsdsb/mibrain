@@ -33,7 +33,7 @@ scope: app | ksu | daemon | docs | scripts
 示例：
 ```
 feat(app): 集成 sherpa-onnx 流式 ASR
-fix(ksu): 修复 service.sh 在 HyperOS 2 上的启动顺序
+fix(ksu): 修复 post-fs-data.sh 在 HyperOS 3 上的启动顺序
 docs: 补充 LSPosed 配置说明
 ```
 
@@ -58,7 +58,7 @@ docs: 补充 LSPosed 配置说明
 ```
 ### 设备信息
 - 型号: 红米 K50 Ultra
-- 系统: HyperOS 2.0 (Android 15)
+- 系统: HyperOS 3.0 (Android 15)
 - Root: KernelSU v1.0 + ZygiskNext + LSPosed
 
 ### 测试内容

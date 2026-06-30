@@ -9,8 +9,8 @@
 | [02_second_review.md](./02_second_review.md) | 第二轮严谨审视（5 个新发现 + 修订） | ✅ |
 | [03_architecture_detail.md](./03_architecture_detail.md) | 详细架构与时序图（进程拓扑、协议、状态机） | ✅ |
 | 04_build_guide.md | 编译指南 | ⏳ Phase 1 |
-| [05_deploy_guide.md](./05_deploy_guide.md) | 部署指南（用户向，含 8 步白名单） | ✅ |
-| [06_lspoded_setup.md](./06_lspoded_setup.md) | LSPosed 配置指南（Phantom Mic 详解） | ✅ |
+| [05_deploy_guide.md](./05_deploy_guide.md) | 部署指南（用户向，含 9 步白名单） | ✅ |
+| [06_lspoded_setup.md](./06_lspoded_setup.md) | LSPosed Vector 配置指南（Phantom Mic 详解） | ✅ |
 | [07_troubleshooting.md](./07_troubleshooting.md) | 故障排查（7 大类故障 + 排查流程） | ✅ |
 | 08_performance_bench.md | 性能基准 | ⏳ Phase 5 |
 | [09_phase6_network_tools_design.md](./09_phase6_network_tools_design.md) | Phase 6 联网工具调用设计（开关 + 4 工具） | ✅ 草案 |

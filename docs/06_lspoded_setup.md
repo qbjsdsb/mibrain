@@ -1,6 +1,6 @@
-# LSPosed 配置指南
+# LSPosed Vector 配置指南
 
-> 本文档说明如何在 LSPosed 里启用 Phantom Mic 模块，让 MiBrain 在 MIUI/HyperOS 后台也能稳定录音。
+> 本文档说明如何在 LSPosed Vector 里启用 Phantom Mic 模块，让 MiBrain 在 MIUI/HyperOS 后台也能稳定录音。
 
 > **2026-06-30 修订说明**（第三轮 web 核实 [F1](./14_feasibility_recheck_and_plan.md) + [F2](./14_feasibility_recheck_and_plan.md)）：
 > - **LSPosed 框架升级为 LSPosed Vector**（[D9](../DECISIONS.md)）：原 LSPosed 项目自 2024 年起活跃度下降，社区接力维护分支 **LSPosed Vector** 是当前唯一活跃维护版本
@@ -39,7 +39,7 @@ ls /data/adb/lspd
 
 ## 2. Phantom Mic 是什么
 
-[Phantom Mic](https://github.com/Xposed-Modules-Repo/tn.amin.phantom_mic) 是 LSPosed 官方仓库的模块，**hook Android native 层的 `AudioRecord.cpp`**，让指定 App 即使在后台也能正常录音。
+[Phantom Mic](https://github.com/Xposed-Modules-Repo/tn.amin.phantom_mic) 是 LSPosed Vector 官方仓库的模块，**hook Android native 层的 `AudioRecord.cpp`**，让指定 App 即使在后台也能正常录音。
 
 它解决的核心问题：
 - MIUI 锁屏后 `AudioRecord.read()` 返回 0 字节
@@ -69,11 +69,11 @@ adb install PhantomMic-2.0.apk
 
 ---
 
-## 4. 在 LSPosed 启用
+## 4. 在 LSPosed Vector 启用
 
 ### 4.1 启用模块
 
-1. 打开 LSPosed Manager
+1. 打开 LSPosed Vector Manager
 2. 主页 → 模块
 3. 找到 **Phantom Mic**
 4. 点右侧开关，启用模块
@@ -101,7 +101,7 @@ adb install PhantomMic-2.0.apk
 
 ### 4.4 重启
 
-LSPosed 模块需要重启才生效：
+LSPosed Vector 模块需要重启才生效：
 
 ```bash
 adb reboot
@@ -113,9 +113,9 @@ adb reboot
 
 ## 5. 验证 Phantom Mic 工作
 
-### 5.1 检查 LSPosed 状态
+### 5.1 检查 LSPosed Vector 状态
 
-打开 LSPosed Manager → 模块 → Phantom Mic：
+打开 LSPosed Vector Manager → 模块 → Phantom Mic：
 - 模块状态：**已启用**
 - 作用域：包含 MiBrain
 
@@ -147,7 +147,7 @@ adb logcat | grep -i phantom
 
 ⚠️ **风险升级**（[D14](../DECISIONS.md)）：Phantom Mic v2.0 自 2024-07 发布至本次设计冻结已近 2 年未更新，HyperOS 3（Android 15）兼容性未验证，风险从"中"升级为"高"。
 
-**LSPosed Vector 框架 ≠ Phantom Mic 模块**：LSPosed Vector v2.0.3 已支持 Android 8.1-17 Beta 3，框架本身可在 HyperOS 3 上激活。但 Phantom Mic 是 LSPosed 模块，模块内部依赖的 LSPosed API 版本可能滞后，仍可能失效。
+**LSPosed Vector 框架 ≠ Phantom Mic 模块**：LSPosed Vector v2.0.3 已支持 Android 8.1-17 Beta 3，框架本身可在 HyperOS 3 上激活。但 Phantom Mic 是 LSPosed Vector 模块，模块内部依赖的 LSPosed Vector API 版本可能滞后，仍可能失效。
 
 进入 Phase 1 启动前先复查：
 1. 去 https://github.com/Xposed-Modules-Repo/tn.amin.phantom_mic/releases 看是否有新版本
@@ -169,18 +169,18 @@ appops set <mibrain_uid> OP_RECORD_AUDIO allow
 ```
 APK 里加一个桌面快捷方式兜底（双击电源键 → 触发录音）。
 
-**方案 C：换用其他 LSPosed 录音 hook 模块**
+**方案 C：换用其他 LSPosed Vector 录音 hook 模块**
 候选：
 - [XAudioCapture](https://github.com/wzhy90/XAudioCapture)（主要 hook 播放录音，非麦克风）
 - [WhatsMicFix](https://github.com/D4vRAM369/WhatsMicFix-LSPosed)（专为 WhatsApp，可改造）
 
 ### 6.2 模块冲突
 
-如果同时装了多个 LSPosed 录音 hook，可能冲突。**只装一个**。
+如果同时装了多个 LSPosed Vector 录音 hook，可能冲突。**只装一个**。
 
 ### 6.3 ZygiskNext 没启用
 
-LSPosed 必须依赖 ZygiskNext 提供 Zygisk 运行时。
+LSPosed Vector 必须依赖 ZygiskNext 提供 Zygisk 运行时。
 
 ```bash
 adb shell
@@ -204,7 +204,7 @@ frameworks/av/media/libaudiohal/.../AudioRecord.cpp
   - set(...)
 ```
 
-通过 LSPosed 的 `Native API`（Zygisk 提供），在目标 App 启动时注入 hook 代码：
+通过 LSPosed Vector 的 `Native API`（Zygisk 提供），在目标 App 启动时注入 hook 代码：
 
 1. App 调 `AudioRecord.read(buf, size)`
 2. Phantom Mic 拦截
@@ -218,17 +218,17 @@ frameworks/av/media/libaudiohal/.../AudioRecord.cpp
 
 ## 8. 配置截图（待 Phase 4 补充）
 
-LSPosed 配置界面的截图会在 Phase 4 真机测试时补充到 `docs/assets/` 目录。
+LSPosed Vector 配置界面的截图会在 Phase 4 真机测试时补充到 `docs/assets/` 目录。
 
 ---
 
 ## 9. 卸载 Phantom Mic
 
-1. LSPosed Manager → 模块 → Phantom Mic → 关闭
+1. LSPosed Vector Manager → 模块 → Phantom Mic → 关闭
 2. 重启
 3. `adb uninstall tn.amin.phantom_mic`
 
-卸载后 MiBrain 在 HyperOS 2 上的后台录音可能失效，回到 §6 的备选方案。
+卸载后 MiBrain 在 HyperOS 3 上的后台录音可能失效，回到 §6 的备选方案。
 
 ---
 
@@ -236,8 +236,8 @@ LSPosed 配置界面的截图会在 Phase 4 真机测试时补充到 `docs/asset
 
 | 风险 | 影响 | 缓解 |
 |---|---|---|
-| Phantom Mic 是 root 级 hook，安全性敏感 | 中 | 来自 LSPosed 官方仓库，可信 |
+| Phantom Mic 是 root 级 hook，安全性敏感 | 中 | 来自 LSPosed Vector 官方仓库，可信 |
 | HyperOS 升级后 hook 失效 | 中 | 升级前先验证 |
-| LSPosed 框架本身被检测 | 低 | 一般 App 不检测 |
+| LSPosed Vector 框架本身被检测 | 低 | 一般 App 不检测 |
 | 同时装多个录音 hook 冲突 | 中 | 只装一个 |
-| Phantom Mic 上游停滞 / HyperOS 2 不兼容 | 高 | v2.0 已近 2 年未更新（[D14](../DECISIONS.md)）；Phase 1 启动前先复查上游活跃度；Phase 4 真机验证后准备 fallback（appops + 双触发兜底） |
+| Phantom Mic 上游停滞 / HyperOS 3 不兼容 | 高 | v2.0 已近 2 年未更新（[D14](../DECISIONS.md)）；Phase 1 启动前先复查上游活跃度；Phase 4 真机验证后准备 fallback（appops + 双触发兜底） |

@@ -58,7 +58,7 @@ cat /data/adb/mibrain/install.log
 
 常见错误：
 - `appops set` 失败 → KSU root 未生效，检查 KSU Manager
-- `chcon` 失败 → sepolicy.rule 未匹配 HyperOS 2，参考 [06_lspoded_setup.md §6](./06_lspoded_setup.md)
+- `chcon` 失败 → sepolicy.rule 未匹配 HyperOS 3，参考 [06_lspoded_setup.md §6](./06_lspoded_setup.md)
 
 ---
 
@@ -167,7 +167,7 @@ ps -A | grep mibrain
 ```
 
 如果进程被杀：
-1. 重做 [05_deploy_guide.md §5](./05_deploy_guide.md) 全部 8 步白名单配置
+1. 重做 [05_deploy_guide.md §5](./05_deploy_guide.md) 全部 9 步白名单配置
 2. 检查 Phantom Mic 是否启用：LSPosed Manager → Phantom Mic → 状态
 3. 看是否勾选了 MiBrain：LSPosed → Phantom Mic → 作用域
 
@@ -251,7 +251,7 @@ dmesg | grep -i "lmkd\|lowmemorykiller"
 - 默认已是 1.5B；若用户切到 3B 质量优先模式则换回 1.5B（[D1](../DECISIONS.md)）
 - 调短 `keep_alive_minutes`（5→3）
 
-> 默认 1.5B 模型峰值 6.77GB（[03_architecture_detail.md §6](./03_architecture_detail.md)），留 1.23GB headroom。
+> 默认 1.5B 模型串行峰值 ~7.5GB（[03_architecture_detail.md §6](./03_architecture_detail.md)），留 0.5GB headroom（最坏叠加 7.89GB，紧张）。
 
 ### 7.2 现象：设备严重发热
 
@@ -346,7 +346,7 @@ watch -n 1 "cat /sys/class/thermal/thermal_zone*/temp"
 
 | 限制 | 原因 | 缓解 |
 |---|---|---|
-| 锁屏唤醒在 HyperOS 2 上不保证 | Phantom Mic 兼容性未验证 | Phase 4 真机测试 |
+| 锁屏唤醒在 HyperOS 3 上不保证 | Phantom Mic 兼容性未验证 | Phase 4 真机测试 |
 | 8GB 内存峰值紧张 | 硬件限制 | 用 1.5B 模型 |
 | 中文唤醒词需自训 | sherpa-onnx KWS 默认英文，[D23](../DECISIONS.md) | MVP 用 hey_jarvis |
 | TTS 不够自然 | VITS vits-zh-ll 质量（[D22](../DECISIONS.md)），可升级到 matcha+vocos（matcha-icefall-zh-baker 已验证 Apache 2.0） | 默认 vits-zh-ll，按需升级 |

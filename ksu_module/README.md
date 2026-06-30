@@ -9,23 +9,24 @@ ksu_module/
 ├── module.prop             # 模块元信息
 ├── install.sh              # 架构检查 + 权限设置
 ├── post-fs-data.sh         # 创建目录 + chcon SELinux
-├── service.sh              # 启动 llama-server 二进制 + watchdog
+# service.sh 已删除（[D7](../DECISIONS.md) 切回 JNI 后不再有 service.sh 启动推理服务；
+# KSU 仅用 post-fs-data.sh 配置 appops + sepolicy.rule 放行）
 ├── uninstall.sh            # 清理进程（不删模型）
 ├── sepolicy.rule           # KSU SELinux 放行规则
-├── system/etc/sysconfig/
-│   └── mibrain.xml         # 电池白名单
-└── libs/
-    ├── llama-server        # llama.cpp android-arm64 二进制
-    └── (whisper.cpp, piper 可选，后续阶段)
+└── system/etc/sysconfig/
+    └── mibrain.xml         # 电池白名单
+# libs/ 子目录已删除（不再打包 llama-server 二进制到 KSU 模块；
+# .so 改由 APK jniLibs 携带，[D7](../DECISIONS.md)）
 ```
 
 ## 模块职责
 
-KSU 模块**只做三件事**：
+KSU 模块**只做两件事**：
 
-1. **启动 llama-server 二进制**（监听 127.0.0.1:8080，OpenAI 兼容 API）
-2. **设置 appops 权限**（让 APK 有 RECORD_AUDIO 权限，绕过 MIUI 部分限制）
-3. **加入电池白名单**（防止 MIUI 锁屏杀进程）
+1. **设置 appops 权限**（让 APK 有 RECORD_AUDIO 权限，绕过 HyperOS 部分限制）
+2. **加入电池白名单 + 关闭应用智能休眠**（[D31](../DECISIONS.md)，防止 HyperOS 3 锁屏杀进程）
+
+**不再启动 llama-server**（[D7](../DECISIONS.md) 切回 JNI，推理在 APK 内完成）
 
 **不打包**：
 - 模型文件（用户自己下载）
