@@ -2,8 +2,14 @@
 
 > 本文档说明如何在 LSPosed 里启用 Phantom Mic 模块，让 MiBrain 在 MIUI/HyperOS 后台也能稳定录音。
 
-> **2026-06-30 修订说明**：
-> - Phantom Mic 风险升级为高（[D14](../DECISIONS.md)）：v2.0 自 2024-07 发布至本次设计冻结已近 2 年未更新，HyperOS 2 兼容性未验证。Phase 1 启动前先去 [上游仓库](https://github.com/Xposed-Modules-Repo/tn.amin.phantom_mic/releases) 复查活跃度
+> **2026-06-30 修订说明**（第三轮 web 核实 [F1](./14_feasibility_recheck_and_plan.md) + [F2](./14_feasibility_recheck_and_plan.md)）：
+> - **LSPosed 框架升级为 LSPosed Vector**（[D9](../DECISIONS.md)）：原 LSPosed 项目自 2024 年起活跃度下降，社区接力维护分支 **LSPosed Vector** 是当前唯一活跃维护版本
+>   - v2.0.1：2026-04-21 发布
+>   - v2.0.2：2026-05-05 发布
+>   - **v2.0.3-7716：2026-05-20 发布**（本次设计冻结时最新）
+>   - 兼容性：Android 8.1 - Android 17 Beta 3
+> - **HyperOS 升级为 HyperOS 3**（[D6](../DECISIONS.md)）：HyperOS 3 国行版已对 K50U 推送 OS3.0.1.0.VLFCNXM（2026-01-20 OTA）/ OS3.0.2.0.VLFCNXM（2026-04-13 Fastboot），基于 Android 15
+> - Phantom Mic 风险升级为高（[D14](../DECISIONS.md)）：v2.0 自 2024-07 发布至本次设计冻结已近 2 年未更新，**LSPosed Vector 框架升级 ≠ Phantom Mic 模块兼容性升级**，仍需 Phase 1 启动前先去 [上游仓库](https://github.com/Xposed-Modules-Repo/tn.amin.phantom_mic/releases) 复查活跃度
 > - 唤醒词改 sherpa-onnx KWS（[D23](../DECISIONS.md)）：弃用 openWakeWord，本文件 §5.3 测试用"hey jarvis"仍有效
 
 ---
@@ -12,9 +18,9 @@
 
 - ✅ KernelSU 已装且启用
 - ✅ ZygiskNext 已装且在 KSU 里启用
-- ✅ LSPosed 已装且框架激活
+- ✅ **LSPosed Vector v2.0.3-7716**（[D9](../DECISIONS.md)）已装且框架激活
 
-验证 LSPosed 是否正常：
+验证 LSPosed Vector 是否正常：
 
 ```bash
 adb shell
@@ -23,9 +29,11 @@ ls /data/adb/lspd
 # 应该有 config.bin, framework.jar 等文件
 ```
 
-或打开 LSPosed Manager，主界面应该显示"激活"。
+或打开 LSPosed Vector Manager，主界面应该显示"激活"，并在关于页看到版本号 v2.0.3-7716。
 
-⚠️ Phantom Mic v2.0 自 2024-07 发布至本次设计冻结（2026-06-30）已近 2 年未更新，上游活跃度存疑。Phase 1 启动前先去 [上游仓库](https://github.com/Xposed-Modules-Repo/tn.amin.phantom_mic/releases) 复查是否有新版本或 HyperOS 2 / Android 15 兼容性反馈（[D14](../DECISIONS.md)）。
+⚠️ **重要**（[F1](./14_feasibility_recheck_and_plan.md)）：原 LSPosed 项目（`LSPosed/LSPosed`）自 2024 年起活跃度下降，**不要再装原版 LSPosed**。本次设计冻结时唯一活跃维护版本是 LSPosed Vector（fork 自 LSPosed），下载入口见 [LSPosed Vector Releases](https://github.com/LSPosed/LSPosed/releases)（占位链接，实际下载地址在 Phase 1 实施前复查上游确认）。
+
+⚠️ Phantom Mic v2.0 自 2024-07 发布至本次设计冻结（2026-06-30）已近 2 年未更新，上游活跃度存疑。Phase 1 启动前先去 [上游仓库](https://github.com/Xposed-Modules-Repo/tn.amin.phantom_mic/releases) 复查是否有新版本或 HyperOS 3 / Android 15 兼容性反馈（[D14](../DECISIONS.md)）。
 
 ---
 
@@ -135,20 +143,23 @@ adb logcat | grep -i phantom
 
 ## 6. Phantom Mic 不工作怎么办
 
-### 6.1 HyperOS 2 (Android 15) 兼容性问题
+### 6.1 HyperOS 3 (Android 15) 兼容性问题
 
-⚠️ **风险升级**（[D14](../DECISIONS.md)）：Phantom Mic v2.0 自 2024-07 发布至本次设计冻结已近 2 年未更新，HyperOS 2（Android 15）兼容性未验证，风险从"中"升级为"高"。
+⚠️ **风险升级**（[D14](../DECISIONS.md)）：Phantom Mic v2.0 自 2024-07 发布至本次设计冻结已近 2 年未更新，HyperOS 3（Android 15）兼容性未验证，风险从"中"升级为"高"。
+
+**LSPosed Vector 框架 ≠ Phantom Mic 模块**：LSPosed Vector v2.0.3 已支持 Android 8.1-17 Beta 3，框架本身可在 HyperOS 3 上激活。但 Phantom Mic 是 LSPosed 模块，模块内部依赖的 LSPosed API 版本可能滞后，仍可能失效。
 
 进入 Phase 1 启动前先复查：
 1. 去 https://github.com/Xposed-Modules-Repo/tn.amin.phantom_mic/releases 看是否有新版本
-2. 看 Issues 区是否有 HyperOS 2 / Android 15 兼容性反馈
-3. 如果上游确认停滞，按以下方案 B/C 之一替代
+2. 看 Issues 区是否有 HyperOS 3 / Android 15 兼容性反馈
+3. 同时确认 LSPosed Vector v2.0.3 在 HyperOS 3 K50U 上是否激活（无框架 = 模块也无用）
+4. 如果上游确认停滞，按以下方案 B/C 之一替代
 
-如果 Phase 4 真机验证 Phantom Mic 在 HyperOS 2 上无效：
+如果 Phase 4 真机验证 Phantom Mic 在 HyperOS 3 上无效：
 
-**方案 A：降级到 HyperOS 1（不推荐）**
-- HyperOS 1 基于 Android 12/13
-- 但降级会丢失系统新功能
+**方案 A：降级到 HyperOS 1 或 HyperOS 2（不推荐）**
+- HyperOS 1/2 基于 Android 12-15
+- 但降级会丢失系统新功能，且 HyperOS 3 已对 K50U 推送，不应再退
 
 **方案 B：用 appops 强制 + 双触发兜底**
 KSU 模块的 `post-fs-data.sh` 自动执行：

@@ -21,12 +21,16 @@
 | 项 | 要求 | 验证方式 |
 |---|---|---|
 | 设备 | 红米 K50 Ultra（骁龙 8+ Gen 1） | 设置 → 我的设备 |
-| 系统 | HyperOS 1+（Android 12+） | 设置 → 我的设备 → MIUI 版本 |
+| 系统 | **HyperOS 3**（Android 15，[D6](../DECISIONS.md)）| 设置 → 我的设备 → MIUI 版本（应为 OS3.0.1.0.VLFCNXM 或更高；2026-01-20 已对 K50U 推送） |
 | Root | KernelSU 已装且工作 | KSU Manager 应用可打开 |
-| Zygisk | ZygiskNext 已装且启用 | LSPosed 显示"Zygisk 已注入" |
-| LSPosed | LSPosed 已装且启用 | LSPosed Manager 显示框架激活 |
+| Zygisk | ZygiskNext 已装且启用 | LSPosed Vector 显示"Zygisk 已注入" |
+| LSPosed | **LSPosed Vector v2.0.3-7716**（[D9](../DECISIONS.md)，2026-05-20 最新版）| LSPosed Manager 显示框架激活；支持 Android 8.1-17 Beta 3 |
 | 存储 | 至少 5GB 可用空间 | 文件管理器查看 |
 | 网络 | 首次配置需联网下载 ~1.4GB 模型（默认配置） | - |
+
+> ⚠️ **2026-06-30 第三轮 web 核实修订**（[F2](./14_feasibility_recheck_and_plan.md)）：
+> - 系统：原"HyperOS 1+"升级为"HyperOS 3"。HyperOS 3 国行版已对 K50U 推送：OS3.0.1.0.VLFCNXM（2026-01-20 OTA）/ OS3.0.2.0.VLFCNXM（2026-04-13 Fastboot 包）。如未升级，先在系统更新里升级，再做后续步骤。
+> - LSPosed：原"LSPosed"升级为"LSPosed Vector v2.0.3-7716"。LSPosed 原项目自 2024 年起活跃度下降，社区接力维护分支 **LSPosed Vector** 是当前唯一活跃维护版本（[D9](../DECISIONS.md)）。如已装 LSPosed 原版，先卸载再装 LSPosed Vector。
 
 不满足任何一项 → 先解决再继续。
 
@@ -206,7 +210,7 @@ adb install -r app-release.apk
 
 ## 5. 关键：MIUI/HyperOS 系统设置白名单（必做）
 
-**这一步漏一个都会导致锁屏后无法唤醒**。在 HyperOS 上做完以下 8 步：
+**这一步漏一个都会导致锁屏后无法唤醒**。在 HyperOS 上做完以下 **9 步**（[E13](./14_feasibility_recheck_and_plan.md) 修订，HyperOS 2.0+ 新增"应用智能休眠"开关必须关闭）：
 
 ### 5.1 自启动
 - 路径：设置 → 应用 → 应用管理 → MiBrain → 自启动
@@ -251,11 +255,25 @@ appops get 10234 RECORD_AUDIO
 # 应该输出: RECORD_AUDIO: allow; time=...
 ```
 
-> **关于 appops 与 Phantom Mic 的关系**：appops 是 Phantom Mic 失效时的 fallback。
+> **关于 appops 与 Phantom Mic 的关系**（[E13](./14_feasibility_recheck_and_plan.md) 修订）：appops 是 Phantom Mic 失效时的 fallback，**不是省略首次授权的捷径**。即使 appops 已 allow，首次安装 MiBrain 仍需在系统设置里手动授予"录音权限"运行时授权（Android 13+ 流程），appops 仅在后续被 MIUI 收回时自动恢复。
 > Phase 4 真机验证前，**先做 [D14 复查](../DECISIONS.md)**：去 Phantom Mic 上游仓库
-> 看是否有新版本 / HyperOS 2（Android 15）兼容性反馈，若上游已停滞需评估换备选方案
+> 看是否有新版本 / HyperOS 3（Android 15）兼容性反馈，若上游已停滞需评估换备选方案
 > （[06_lspoded_setup.md §6.1](./06_lspoded_setup.md) 列了候选）。在复查未完成前不要把
 > appops 当成可省略步骤——锁屏唤醒链路里它仍是兜底。
+
+### 5.9 应用智能休眠（HyperOS 2.0+ 必做，[E13](./14_feasibility_recheck_and_plan.md) 新增）
+
+> ⚠️ **2026-06-30 第三轮新增**：HyperOS 2.0+ 引入 AI 智能休眠机制，**默认会自动休眠后台长期不活跃的应用**，即使已加入电池白名单也会被杀。MiBrain 作为后台长期运行的语音助手，**必须关闭此项**。
+
+- 路径：设置 → 电池 → 应用智能休眠（或 设置 → 应用 → 应用管理 → MiBrain → 应用智能休眠）
+- 操作：**关闭**（或把 MiBrain 加入"不智能休眠"白名单）
+- 验证：锁屏 1 小时后 adb logcat 仍能看到 MiBrain ForegroundService 在跑
+
+> 关闭此项与 §5.2/§5.3 "无限制" 不可互替——三者各自独立的开关：
+> - §5.2/§5.3 "无限制"：传统省电策略，Android 6+ 就有
+> - §5.9 "应用智能休眠"：HyperOS 2.0+ 新增的 AI 行为预测休眠，**白名单不豁免**
+>
+> 不关 §5.9 的现象：锁屏 30 分钟-1 小时后 ForegroundService 被杀，唤醒失败，需重启用。
 
 ### 验证白名单生效
 锁屏 5 分钟后，adb logcat 应该还能看到 MiBrain ForegroundService 在跑：

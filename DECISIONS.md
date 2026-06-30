@@ -39,11 +39,16 @@
 - **日期**: 2026-06-30
 - **状态**: 已确认
 
-### ✅ D6. 设备
-- **选择**: 红米 K50 Ultra（骁龙 8+ Gen 1, 8GB RAM, HyperOS）
-- **理由**: 用户硬件
+### ✅ D6. 设备（2026-06-30 修订：HyperOS 2 → HyperOS 3）
+- **选择**: 红米 K50 Ultra（骁龙 8+ Gen 1, 8GB RAM, HyperOS 3）
+- **修订原因**: 第三轮 web 核实（[F2](./docs/14_feasibility_recheck_and_plan.md)）发现 HyperOS 3 国行版已对 K50U 推送：
+  - **国行 OS3.0.1.0.VLFCNXM**：2026-01-20 推送（OTA）
+  - **国行 OS3.0.2.0.VLFCNXM**：2026-04-13 推送（Fastboot 包同步放出）
+  - HyperOS 3 基于 Android 15（部分新机 Android 16 Beta），与 [D9](#-d9-lsposed-方案) LSPosed Vector v2.0.3 兼容性匹配
+- **理由**: 用户硬件 + 系统已是 HyperOS 3（不再是设计冻结初版假设的 HyperOS 1+）
 - **日期**: 2026-06-30
 - **状态**: 已确认
+- **修订历史**: 初版 HyperOS 1+ → 修订 HyperOS 3（同日，第三轮 web 核实）
 
 ### ✅ D7. 推理后端（2026-06-30 修订：切回 JNI）
 - **选择**: **llama.cpp b9844 + 官方 [llama.android](https://github.com/ggml-org/llama.cpp/tree/master/examples/llama.android) JNI 模块**（参考 [ToolNeuron](https://github.com/Siddhesh2377/ToolNeuron) 的 `InferenceService.kt` + `InferenceClient.kt`（位于 `service/inference/` 目录）实践）
@@ -65,12 +70,21 @@
 - **日期**: 2026-06-30
 - **状态**: 已确认
 
-### ✅ D9. LSPosed 方案
-- **选择**: 装现成的 Phantom Mic v2.0，不自写 hook
+### ✅ D9. LSPosed 方案（2026-06-30 修订：LSPosed Vector 复活）
+- **选择**: 装现成的 Phantom Mic v2.0，不自写 hook；LSPosed 框架用 **LSPosed Vector v2.0.3-7716**
 - **理由**: 已验证是 LSPosed 官方仓库，hook native 层
-- **日期**: 2026-06-30
+- **修订原因（第三轮 web 核实 [F1](./docs/14_feasibility_recheck_and_plan.md)）**:
+  原设计文档假设 LSPosed 原项目，但实际上：
+  - LSPosed 原项目（`LSPosed/LSPosed`）自 2024 年起活跃度下降，长期未发新版本
+  - **LSPosed Vector 是接力的新维护分支**（fork 自 LSPosed，开发者从社区延续维护）：
+    - v2.0.1：2026-04-21 发布
+    - v2.0.2：2026-05-05 发布
+    - **v2.0.3-7716：2026-05-20 发布**（本次设计冻结时最新）
+  - 兼容性：Android 8.1 - Android 17 Beta 3
+  - HyperOS 3（[D6](#-d6-设备2026-06-30-修订hyperos-2--hyperos-3)，Android 15）落在 Vector 已支持范围内
 - **状态**: 已确认（带风险）
-- **风险**: Phantom Mic v2.0 发布于 2024-07，至 2026-06-30 已近 2 年未更新，HyperOS 2（Android 15）兼容性未验证。风险升级见 [D14](#-d14-phantom-mic-在-hyperos-2-上的兼容性)
+- **风险**: Phantom Mic v2.0 仍发布于 2024-07，至 2026-06-30 已近 2 年未更新；LSPosed Vector 框架本身的兼容性 ≠ Phantom Mic 模块的兼容性。风险升级见 [D14](#-d14-phantom-mic-在-hyperos-3-上的兼容性)
+- **修订历史**: 初版 LSPosed → 修订 LSPosed Vector v2.0.3-7716（同日，第三轮 web 核实）
 
 ### ✅ D10. APK 开发语言
 - **选择**: Kotlin + Jetpack Compose
@@ -97,16 +111,21 @@
 - **说明**: docs/05_deploy_guide.md 提到要校验 SHA256，但具体值需 Phase 1 release 时填
 - **状态**: 待 Phase 1
 
-### 🔴 D14. Phantom Mic 在 HyperOS 2 上的兼容性
+### 🔴 D14. Phantom Mic 在 HyperOS 3 上的兼容性（2026-06-30 修订：HyperOS 2 → HyperOS 3）
 - **说明**: 真机未验证；且 Phantom Mic v2.0 发布于 2024-07，**至本次设计冻结（2026-06-30）已近 2 年未更新**，可能已不维护
+- **修订原因（第三轮 web 核实 [F1](./docs/14_feasibility_recheck_and_plan.md)）**:
+  LSPosed Vector 框架（[D9](#-d9-lsposed-方案2026-06-30-修订lsposed-vector-复活)）v2.0.3-7716 已支持到 Android 17 Beta 3，**框架兼容性已升级**。但 Phantom Mic 是 LSPosed 模块，模块本身的兼容性 ≠ 框架兼容性。Phantom Mic v2.0 已 2 年未发新版，模块内部依赖的 LSPosed API 版本可能滞后。
 - **风险等级**: 高
-  - 上游可能已停滞，HyperOS 2（Android 15）兼容性更不确定
+  - 上游 Phantom Mic 可能已停滞
+  - HyperOS 3（Android 15，[D6](#-d6-设备2026-06-30-修订hyperos-2--hyperos-3)）兼容性更不确定
   - 原设计文档（[00_design_overview.md §10](./docs/00_design_overview.md)、[01_feasibility_verification.md §三 风险 1](./docs/01_feasibility_verification.md)）将此风险标为"中"，已严重低估
 - **进入 Phase 1 前的必做检查**:
-  1. 去上游仓库 https://github.com/Xposed-Modules-Repo/tn.amin.phantom_mic/releases 看是否有新版本
-  2. 看上游 Issues 区是否有 HyperOS 2 / Android 15 兼容性反馈
-  3. 若上游确认停滞，需要重新评估是否换备选方案（[06_lspoded_setup.md §6.1](./docs/06_lspoded_setup.md) 列了 XAudioCapture / WhatsMicFix 等候选）
+  1. 去 Phantom Mic 上游 https://github.com/Xposed-Modules-Repo/tn.amin.phantom_mic/releases 看是否有新版本
+  2. 看 Issues 区是否有 HyperOS 3 / Android 15 兼容性反馈
+  3. 同时确认 LSPosed Vector v2.0.3 在 HyperOS 3 K50U 上是否激活（无框架 = 模块也无用）
+  4. 若 Phantom Mic 上游确认停滞，需要重新评估是否换备选方案（[06_lspoded_setup.md §6.1](./docs/06_lspoded_setup.md) 列了 XAudioCapture / WhatsMicFix 等候选）
 - **状态**: 待 Phase 1 启动前先做上游活跃度复查；真机验证留 Phase 4
+- **修订历史**: 初版 HyperOS 2 → 修订 HyperOS 3 + LSPosed Vector 框架升级（同日，第三轮 web 核实）
 
 ### 🟡 D15. 中文唤醒词样本
 - **说明**: Phase 3 时需采集 100+ 句"嘿小脑"样本
@@ -156,7 +175,7 @@
 - **状态**: 已确认
 - **日期**: 2026-06-30
 
-### ✅ D22. ASR/TTS 模型许可友好化（2026-06-30 新增）
+### ✅ D22. ASR/TTS 模型许可友好化（2026-06-30 新增，第三轮 web 核实补 NON-COMMERCIAL 标注）
 - **选择**: 换用 Apache 2.0 许可的 sherpa-onnx 官方模型，弃用 CC BY-NC / CC BY-NC-ND 模型
 - **修订原因**: 深度检查 S7 发现原 paraformer (CC BY-NC 4.0) + aishell3 (CC BY-NC-ND 4.0) 与项目 Apache 2.0 许可冲突，分发时违法
 - **新模型选型**（待 Phase 2 实施时确认具体版本，以下为候选）：
@@ -166,18 +185,18 @@
   | 中文 TTS | sherpa-onnx-vits-zh-ll（替代 aishell3）| 社区贡献，许可未明确声明（HF 卡 metadata 缺失） |
   | 英文 TTS | vits-vctk（ sherpa-onnx 官方）| Apache 2.0 |
   | VAD | silero_vad（sherpa-onnx 自带）| Apache 2.0 |
-  | KWS | sherpa-onnx-kws-zipformer-wenetspeech-3.3M-2024-01-01 | Apache 2.0 |
+  | KWS | sherpa-onnx-kws-zipformer-wenetspeech-3.3M-2024-01-01 | **Apache 2.0（模型权重），但训练数据 WenetSpeech NON-COMMERCIAL**（见 D23） |
 - **代价**: 中文 TTS 自然度可能略降（aishell3 训练数据更全），但避免法律风险
 - **vits-zh-ll 许可风险说明**（2026-06-30 三轮复核新增，纠正原"Apache 2.0"误述）:
   - vits-zh-ll 是社区贡献模型，HF 卡（https://hf-mirror.com/csukuangfj/sherpa-onnx-vits-zh-ll）未声明许可，训练数据来源不明（模型卡仅一句话："This model is contributed by the community and trained using https://github.com/Plachtaa/VITS-fast-fine-tuning"）
   - **风险评估**：分发 APK + 此模型可能存在许可风险
-  - **推荐替代**：升级到 `matcha-icefall-zh-baker`（Apache 2.0 已验证）
-  - **MVP 取舍**：Phase 2 仍可用 vits-zh-ll 测试自然度，Phase 5 发布前必须切换到 matcha-icefall-zh-baker 或确认 vits-zh-ll 许可
+  - **推荐替代**：升级到 `matcha-icefall-zh-baker`（**E11 第三轮 web 核实补正**：模型权重 Apache 2.0，但训练数据 Data-Baker 是 **NON-COMMERCIAL ONLY**，与项目 Apache 2.0 分发不兼容。**因此 matcha-icefall-zh-baker 也只能用于本地测试，不能分发**）
+  - **MVP 取舍**：Phase 2 仍可用 vits-zh-ll 测试自然度（不发布），Phase 5 发布前必须解决 TTS 训练数据许可问题（候选：用 Apache 2.0 数据集自训，或寻找明确许可的中文 TTS 模型）
 - **关联**: 解决深度检查 S7；与 [D23](#-d23-唤醒词改用-sherpa-onnx-kws) 一起统一 sherpa-onnx 全栈
-- **状态**: 已确认
+- **状态**: 已确认（带遗留：TTS 模型许可待 Phase 5 发布前解决）
 - **日期**: 2026-06-30
 
-### ✅ D23. 唤醒词改用 sherpa-onnx KWS（2026-06-30 新增）
+### ✅ D23. 唤醒词改用 sherpa-onnx KWS（2026-06-30 新增，第三轮 web 核实补 NON-COMMERCIAL 标注）
 - **选择**: **弃用 openWakeWord，改用 sherpa-onnx 自带的 KWS 模块**（keyword spotting）
 - **KWS 模型选型**（原引用 `zh-vgg` 不存在，真实模型为 zipformer 架构，sherpa-onnx 官方 KWS 预训练清单全部为 Zipformer 架构）：
   | 用途 | 模型 | 说明 |
@@ -185,14 +204,23 @@
   | 默认中文 | `sherpa-onnx-kws-zipformer-wenetspeech-3.3M-2024-01-01` | 基于 WenetSpeech，MVP 默认推荐 |
   | 备选中英双语 | `sherpa-onnx-kws-zipformer-zh-en-3M-2025-12-20` | 更新更小 3M，可作为升级选项 |
   | 英文（hey_jarvis MVP） | `sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01` | 用于 hey_jarvis MVP |
-  - 所有 KWS 模型均为 Zipformer 架构，Apache 2.0 许可
+  - 所有 KWS 模型权重均为 Zipformer 架构，**Apache 2.0** 许可（sherpa-onnx 仓库 LICENSE）
+- **E12 第三轮 web 核实补正**（WenetSpeech 训练数据许可）:
+  - `kws-zipformer-wenetspeech-3.3M` 的训练数据 **WenetSpeech** 论文原文明确写：
+    > "We propose WenetSpeech, a 10000+ hour multi-domain Mandarin corpus... All datasets are **licensed for non-commercial usage under CC-BY 4.0**."
+  - sherpa-onnx README 仅声明模型权重 Apache 2.0，**未声明训练数据许可**
+  - **风险评估**：分发 APK + 此 KWS 模型，训练数据 CC-BY 4.0 non-commercial 与项目 Apache 2.0 商用分发**存在法律冲突**
+  - **缓解**：
+    1. Phase 5 发布前必须确认 KWS 模型的训练数据许可（向 k2-fsa 团队询问或查阅 WenetSpeech 后续许可更新）
+    2. 若确认 WenetSpeech 仍仅 non-commercial，**MVP 默认改用 `kws-zipformer-gigaspeech-3.3M`（英文 hey_jarvis，[D2](#-d2-唤醒词策略)）**，避开 WenetSpeech 数据许可问题
+    3. 中文唤醒词改用 Apache 2.0 训练数据自训，或保留为 Phase 3+ 后置任务
 - **修订原因**:
   1. sherpa-onnx v1.13.3 已内置 KWS 能力（含 zipformer KWS 模型，原引用 `zh-vgg` 不存在，真实模型为 zipformer 架构），无需另装 openWakeWord + 自写 Kotlin wrapper
   2. 统一技术栈：sherpa-onnx 一个 AAR 同时提供 ASR + TTS + VAD + KWS 四件套，减少依赖
   3. openWakeWord 自写 wrapper 是原 [00_design_overview.md §6](./docs/00_design_overview.md) 列的"重写为 Kotlin"，与 [D8](#-d8-asrtts-引擎) sherpa-onnx 选型重复
 - **代价**: 备选唤醒词模型可能没有 `hey_jarvis`，需用 sherpa-onnx 官方示例词或自训
-- **关联**: [D2](#-d2-唤醒词策略) 的"openWakeWord 没有现成中文模型"理由随此决策失效；与 [D22](#-d22-asrtts-模型许可友好化) 统一 sherpa-onnx 全栈
-- **状态**: 已确认
+- **关联**: [D2](#-d2-唤醒词策略) 的"openWakeWord 没有现成中文模型"理由随此决策失效；与 [D22](#-d22-asrtts-模型许可友好化2026-06-30-新增第三轮-web-核实补-non-commercial-标注) 统一 sherpa-onnx 全栈
+- **状态**: 已确认（带遗留：KWS 模型训练数据许可待 Phase 5 发布前确认）
 - **日期**: 2026-06-30
 
 ### ✅ D24. Qwen 商标使用限制（2026-06-30 新增）
@@ -233,6 +261,77 @@
   4. HyperOS 2 不杀 Direct Boot 下的 FGS（前台服务）
 - **代价**: 若 PoC 不通过，Phase 4 "锁屏唤醒"验收标准降级为"用户首次解锁后可用"
 - **关联**: [D21](#-d21-模型存储路径2026-06-30-新增) DE + Direct Boot；[03_architecture_detail.md §2.1](./docs/03_architecture_detail.md) Direct Boot 支持
+- **状态**: 已确认
+- **日期**: 2026-06-30
+
+### ✅ D28. HTTP server 选型：Ktor 替代 NanoHTTPD（2026-06-30 新增，第三轮 web 核实）
+- **选择**: Phase 8 Cap 1 本地 API 暴露使用 **Ktor**（JetBrains 官方活跃维护），弃用 NanoHTTPD
+- **修订原因**（[E7](./docs/14_feasibility_recheck_and_plan.md) 第三轮 web 核实）:
+  NanoHTTPD 实测发现以下问题，原选型是误判：
+  - last commit ≈ 2 年前（约 2024 年中），项目实质已停止维护
+  - 仅支持 HTTP 1.1，不支持 HTTP/2/HTTP/3
+  - **无内置 SSE**（Server-Sent Events），需自实现，与 Phase 8 Cap 1 流式输出需求冲突
+  - 无内置认证、日志、路由系统
+  - WebSocket 是独立模块（非内置）
+  - 7.2k stars 但 162 open issues 无人响应
+- **Ktor 优势**:
+  - JetBrains 官方活跃维护
+  - 原生支持 SSE / 路由 / 中间件 / WebSocket
+  - 与 Kotlin coroutines 自然集成
+  - 与 llama.android + ToolNeuron 全栈 Kotlin 一致，无新语言负担
+- **代价**: APK 增 ~5MB（Ktor server + coroutines），可接受（APK 已含 libllama.so 30MB + sherpa-onnx 19MB）
+- **关联**: [11_phase8_platform_design.md §1.2/§1.3/§1.5](./docs/11_phase8_platform_design.md)
+- **状态**: 已确认
+- **日期**: 2026-06-30
+
+### ✅ D29. 微信 A2A 协议不对第三方 APK 开放（2026-06-30 新增，第三轮 web 核实）
+- **选择**: MiBrain 作为第三方 APK **不接入微信 A2A 协议**；Phase 7 微信回复路径降级为"通知朗读 + 引导用户手动回复"
+- **修订原因**（[E9](./docs/14_feasibility_recheck_and_plan.md) 第三轮 web 核实）:
+  原 [10_phase7_phone_control_design.md §2.3.2](./docs/10_phase7_phone_control_design.md) "中期方案：调研 A2A 是否对第三方 APK 开放"已通过 web 核实得出明确否定结论：
+  - 微信 2026-06-04 与华为、荣耀、小米、OPPO、vivo 合作推出 A2A 助手能力（来源：hellochinatech.com / itbear.com）
+  - 荣耀 YOYO 首批 2026-06-10 上线（Magic8/500/X70 系列）
+  - **A2A 是腾讯控制的访问机制**，不是 Google/Linux Foundation 开放的 Agent2Agent 协议
+  - **关键事实**：A2A 仅对手机系统级 AI 助手（华为 Xiaoai / 小米 XiaoAi / 荣耀 YOYO / OPPO / vivo）开放，**第三方 APK（如 MiBrain）不可直接接入**
+  - 当前能力范围窄：仅支持发消息 + 语音/视频通话，红包/转账/朋友圈不支持
+  - 决策权始终在微信侧，腾讯可随时扩缩权限
+- **影响范围**:
+  - Phase 7 微信回复路径降级（详见 [10 §2.3.2](./docs/10_phase7_phone_control_design.md)）
+  - 若用户确实需要语音回复微信，建议改用系统级 AI 助手（小爱同学 HyperOS 3 版本预计将接入微信 A2A）
+- **状态**: 已确认
+- **日期**: 2026-06-30
+
+### ✅ D30. 3B 模型在 8GB RAM 设备上不可用（2026-06-30 新增，第三轮内存算法修正）
+- **选择**: **3B 模型选项不可用于 8GB RAM 设备**（K50U），仅保留 1.5B 作为默认
+- **修订原因**（[E10](./docs/14_feasibility_recheck_and_plan.md) 第三轮内存算法修正）:
+  原 D1 备选方案 "Qwen2.5-3B Q4_K_M（~2GB，质量优先模式，需用户主动切换 + Phase 4 真机验证不 OOM）" 经过 [03_architecture_detail.md §6](./docs/03_architecture_detail.md) 内存预算严格计算，3B 模型在 8GB RAM 设备上**必 OOM**：
+  - 3B Q4_K_M 模型权重：~2GB
+  - KV cache 2048 ctx：~0.5GB
+  - 推理缓冲区：~0.2GB
+  - 3B 推理总内存：~2.7GB
+  - + HyperOS 系统 + sherpa-onnx ASR/TTS/VAD/KWS 常驻 + APK 主进程 + 其他后台 = 7.54GB 常驻
+  - + 推理峰值叠加 = **8.59GB 峰值** > 8GB 物理上限，**必 OOM kill**
+  - 即使 VAD + KWS 串行执行也无法避开（system_server + Home 不可释放）
+- **影响范围**:
+  - D1 备选方案 "3B Q4_K_M" 标记为"**8GB 设备不可用**"，仅作为 12GB+ RAM 设备的可选项
+  - [03 §6](./docs/03_architecture_detail.md) 内存预算表更新
+  - Stage 5 真机准出条件修正为：1.5B 串行峰值 < 7.6GB + 24h 无 OOM kill
+- **关联**: [D1](#-d1-默认对话模型2026-06-30-修订)（备选方案修订）
+- **状态**: 已确认
+- **日期**: 2026-06-30
+
+### ✅ D31. HyperOS 2.0+ 应用智能休眠必关（2026-06-30 新增，第三轮 web 核实）
+- **选择**: 部署白名单从 8 步扩到 **9 步**，新增 "关闭应用智能休眠" 作为必做项
+- **修订原因**（[E13](./docs/14_feasibility_recheck_and_plan.md) 第三轮 web 核实）:
+  HyperOS 2.0+ 引入 AI 智能休眠机制，**默认会自动休眠后台长期不活跃的应用**，即使已加入电池白名单也会被杀。MiBrain 作为后台长期运行的语音助手，**必须关闭此项**。
+  - 路径：设置 → 电池 → 应用智能休眠（或 设置 → 应用 → 应用管理 → MiBrain → 应用智能休眠）
+  - 操作：关闭（或把 MiBrain 加入"不智能休眠"白名单）
+  - 验证：锁屏 1 小时后 adb logcat 仍能看到 MiBrain ForegroundService 在跑
+  - 关闭此项与 §5.2/§5.3 "无限制" 不可互替——三者各自独立的开关：
+    - §5.2/§5.3 "无限制"：传统省电策略，Android 6+ 就有
+    - §5.9 "应用智能休眠"：HyperOS 2.0+ 新增的 AI 行为预测休眠，**白名单不豁免**
+  - 不关 §5.9 的现象：锁屏 30 分钟-1 小时后 ForegroundService 被杀，唤醒失败，需重启用
+- **影响范围**: [05_deploy_guide.md §5](./docs/05_deploy_guide.md) 部署白名单从 8 步扩到 9 步，§5.9 新增
+- **关联**: 与 [D6](#-d6-设备2026-06-30-修订hyperos-2--hyperos-3) HyperOS 3 一致（HyperOS 3 继承 HyperOS 2.0 的应用智能休眠机制）
 - **状态**: 已确认
 - **日期**: 2026-06-30
 

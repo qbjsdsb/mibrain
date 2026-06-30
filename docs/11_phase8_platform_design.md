@@ -35,19 +35,27 @@
 
 切回 JNI（[D7](../DECISIONS.md)）后，LlamaEngine 通过 JNI 在 APK 进程内提供推理能力，不再有 llama-server 常驻 HTTP 端点。要对外暴露 LLM 能力，需在 APK 内嵌入一个轻量 HTTP server，由它接收请求 → 调用 LlamaEngine JNI → 返回结果。
 
-### 1.2 HTTP server 选型
+### 1.2 HTTP server 选型（2026-06-30 第三轮修订：E7，NanoHTTPD → Ktor）
 
-| 选项 | 体积 | 优点 | 缺点 |
-|---|---|---|---|
-| NanoHTTPD（推荐） | ~50KB | 轻量，零额外依赖，Android 友好 | 功能基础，需自己实现流式 SSE |
-| Ktor | ~5MB | 功能全，原生支持 SSE/路由/中间件 | 体积大，依赖 Kotlin coroutines 全栈 |
+> ⚠️ **2026-06-30 第三轮修订**（[E7](./14_feasibility_recheck_and_plan.md) + [D28](../DECISIONS.md)）：原表把 NanoHTTPD 标为"推荐"是误判，第三轮 web 核实发现：
+> - NanoHTTPD **last commit ≈ 2 年前**（约 2024 年中），项目实质已停止维护（[open-awesome.com 实测](https://open-awesome.com/projects/nanohttpd)）
+> - 仅支持 HTTP 1.1，**不支持 HTTP/2/HTTP/3**
+> - 无内置 SSE（Server-Sent Events），需自实现，与 Phase 8 Cap 1 流式输出需求冲突
+> - 无内置认证、日志、路由系统
+> - WebSocket 是独立模块（非内置）
+> - 7.2k stars 但 162 open issues 无人响应
+>
+> 选型改为 **Ktor**（[D28](../DECISIONS.md)）：体积增量 ~5MB 可接受（APK 已含 libllama.so 30MB + sherpa-onnx 19MB），换来原生 SSE/路由/中间件 + 活跃维护 + 与 Kotlin coroutines 自然集成。
 
-默认模型已是 1.5B（[D1](../DECISIONS.md)）走轻量路线，HTTP server 也保持轻量一致，故选 NanoHTTPD。
+| 选项 | 体积 | 优点 | 缺点 | 第三轮核实结论 |
+|---|---|---|---|---|
+| ~~NanoHTTPD~~ | ~50KB | 轻量，零额外依赖，Android 友好 | 功能基础，需自实现 SSE | ❌ **last commit 2 年前，实质停止维护**；仅 HTTP 1.1；无内置 SSE；**不推荐** |
+| **Ktor（推荐）** | ~5MB | 功能全，原生支持 SSE/路由/中间件，活跃维护 | 体积比 NanoHTTPD 大 | ✅ JetBrains 官方活跃维护；与 Kotlin coroutines 自然集成；Phase 8 流式输出 + Cap 4 MCP JSON-RPC 都受益 |
 
 ### 1.3 架构
 
 ```
-[外部请求] → NanoHTTPD (APK 内嵌, 8080) → LlamaEngine (JNI) → llama.cpp → 返回
+[外部请求] → Ktor server (APK 内嵌, 8080) → LlamaEngine (JNI) → llama.cpp → 返回
 ```
 
 HTTP server 在 APK 进程内运行，直接调用 LlamaEngine.kt（项目自命名；参考 [ToolNeuron](https://github.com/Siddhesh2377/ToolNeuron) 的 `InferenceService.kt` + `InferenceClient.kt`（位于 `service/inference/` 目录）实践），不跨进程/不跨 SELinux 域。
@@ -61,20 +69,37 @@ HTTP server 在 APK 进程内运行，直接调用 LlamaEngine.kt（项目自命
 
 端口默认 8080，可在 `config.json` 的 `network.api.port` 字段配置。
 
-### 1.5 实现草案
+### 1.5 实现草案（2026-06-30 第三轮修订：NanoHTTPD → Ktor）
 
 ```kotlin
-class MiBrainHttpServer(port: Int, private val llamaEngine: LlamaEngine) {
-    // NanoHTTPD 实现
-    fun serve(session: IHTTPSession): Response {
-        return when (session.uri) {
-            "/v1/chat/completions" -> handleChat(session)  // 调 llamaEngine.complete/streamComplete
-            "/health" -> Response.newFixedLengthResponse("{\"status\":\"ok\"}")
-            else -> Response.newFixedLengthResponse(Response.Status.NOT_FOUND, ...)
+// Ktor 实现（替代原 NanoHTTPD 草案，[D28](../DECISIONS.md)）
+fun Application.mibrainApiModule(llamaEngine: LlamaEngine) {
+    routing {
+        post("/v1/chat/completions") {
+            // 调 llamaEngine.complete() 或 streamComplete()
+            // 流式响应用 respondTextWriter + chunked transfer
+            val req = call.receive<ChatRequest>()
+            if (req.stream == true) {
+                call.respondTextWriter(ContentType.Text.EventStream) {
+                    llamaEngine.streamComplete(req.toPrompt(), req.maxTokens, req.temperature) { token ->
+                        write("data: $token\n\n")
+                        flush()
+                    }
+                    write("data: [DONE]\n\n")
+                }
+            } else {
+                val result = llamaEngine.complete(req.toPrompt(), req.maxTokens, req.temperature)
+                call.respond(ChatResponse(result))
+            }
+        }
+        get("/health") {
+            call.respondText("""{"status":"ok"}""", ContentType.Application.Json)
         }
     }
 }
 ```
+
+Ktor 与 llama.android 官方模块 + ToolNeuron 的 Kotlin 全栈一致，无额外语言负担。
 
 ### 1.6 Phase 8 增强项
 
@@ -189,7 +214,14 @@ Settings → 平台 → 用量统计
 
 ## 3. Cap 4: MCP 协议支持
 
-### 3.1 MCP 简介
+### 3.1 MCP 简介（2026-06-30 第三轮核实：MCP Kotlin SDK 归属修正）
+
+> ⚠️ **E8 第三轮 web 核实补正**（[E8](./14_feasibility_recheck_and_plan.md) + [D28](../DECISIONS.md)）：原表"Anthropic 提出的开放协议"表述准确（MCP 协议规范确实由 Anthropic 主导发布），但**MCP Kotlin SDK 实际由 `modelcontextprotocol` 官方组织维护**（非 Anthropic 仓库直接维护），与 Java/Python/TypeScript SDK 一致：
+> - **官方仓库**：[github.com/modelcontextprotocol/kotlin-sdk](https://github.com/modelcontextprotocol/kotlin-sdk)（modelcontextprotocol 官方组织）
+> - **数据**：1393★，0.13.0 版本，活跃维护（weekly commits）
+> - **Android 兼容性**：第三方已有现成 Android PoC [github.com/kaeawc/android-mcp-sdk](https://github.com/kaeawc/android-mcp-sdk)（Android 端集成参考样板）
+> - **协议规范**：MCP 协议规范本身（含 JSON-RPC over stdio/HTTP+SSE）由 Anthropic 文档站 [modelcontextprotocol.io](https://modelcontextprotocol.io) 维护
+> - 与 D7 一致性：MCP Kotlin SDK 与 llama.android + ToolNeuron 全栈 Kotlin 一致，无新语言负担
 
 MCP（Model Context Protocol）是 Anthropic 提出的开放协议，让 LLM 客户端（如 Claude Desktop、Cursor、VS Code）能调用外部工具/资源。MiBrain 当 MCP server，桌面端就能调手机上的能力。
 
