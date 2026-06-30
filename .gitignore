@@ -1,0 +1,49 @@
+# Build outputs
+app/.gradle/
+app/build/
+app/app/build/
+app/local.properties
+*.apk
+*.aab
+*.dex
+*.class
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# KSU module build
+ksu_module/*.zip
+ksu_module/libs/
+ksu_module/models/
+
+# Logs
+*.log
+logs/
+
+# Models (do not commit)
+*.gguf
+*.onnx
+*.litertlm
+*.bin
+!docs/**/*.bin
+
+# Binaries (downloaded at build time)
+*.so
+!third_party/**/*.so
+
+# Sensitive
+.env
+.env.local
+*.pem
+*.keystore
+secrets/
+
+# Token (sandbox only, never commit)
+.github_token
